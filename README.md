@@ -2,4 +2,4 @@
 
 MMO project for learning and revising Networking
 
-Authors: Mark(@), Adir(@), Lidor(@), Guy(@), Hunny(@)
+Authors: Mark(@KO3JIUHA), Adir(@Adir), Lidor(@shohatl), Guy(@GuySabika), Hunny(@Hunnydrips)
