@@ -1,5 +1,6 @@
 import time
-from item import Item
+from Classes import item
+from Classes import particle
 
 # GLOBAL VARIABLES
 collide_list = [4, 5, 22, 23, 26, 39, 40, 41, 43, 57, 59, 60, 75, 76, 77, 78, 92, 93, 94, 95, 96]
@@ -7,22 +8,23 @@ collide_list = [4, 5, 22, 23, 26, 39, 40, 41, 43, 57, 59, 60, 75, 76, 77, 78, 92
 
 class Player:
     def __init__(self, nickname, ip, key):
-        self.x = 1000
-        self.y = 1000
+        self.x = 100
+        self.y = 100
         self.dir_x = 0
         self.dir_y = 0
-        self.Class = "Mage"
+        self.Class = "Tank"
         self.last_time_used_ability = 0
         self.is_ability_active = False
         self.last_time_moved = 0
+        self.last_time_attack = 0
         self.speed = 8
-        self.armour = 0
+        self.income_dmg_multiplier = 1
         self.other_players_list = []
         self.projectiles = []
         self.picked = 0
-        self.inventory = [Item("bow", 1), False, False, False, False, False]  # to add items later
+        self.inventory = [item.Item("bow", 1), False, False, False, False, False]  # to add items later
         self.gold = 0
-        self.health = 100
+        self.health = 100 / 2
         self.nickname = nickname
         self.ip = ip
         self.key = key
@@ -32,18 +34,20 @@ class Player:
 
     def move(self):
         if time.time() - self.last_time_moved > 10 ** -3:
-            self.x += self.dir_x
-            if self.check_collision():
-                self.x -= self.dir_x
-            self.y += self.dir_y
-            if self.check_collision():
-                self.y -= self.dir_y
+            self.x += self.speed * self.dir_x
+            # if self.check_collision():
+            #     self.x -= self.dir_x
+            self.y += self.speed * self.dir_y
+            # if self.check_collision():
+            #     self.y -= self.dir_y
 
     def attack(self, mouseX, mouseY):
-        self.projectiles.append(particle(self.x, self.y, mouseX, mouseY, self.inventory[self.picked].name))
+        if time.time() - self.last_time_attack > self.inventory[self.picked].cool_down:
+            self.last_time_attack = time.time()
+            self.projectiles.append(particle.Particle(self.x, self.y, mouseX, mouseY, self.inventory[self.picked].speed, self.inventory[self.picked].range, self.inventory[self.picked].dmg, self.inventory[self.picked].base_hit_box))
 
     def use_ability(self):
-        if time.time() - self.last_time_used_ability > self.Class.cooldown:
+        if time.time() - self.last_time_used_ability > 10:
             self.last_time_used_ability = time.time()
             self.is_ability_active = True
 
@@ -52,8 +56,7 @@ class Player:
             if time.time() - self.last_time_used_ability > 2:
                 self.is_ability_active = False
                 self.speed = 8
-                self.armour = 0
-        else:
+                self.income_dmg_multiplier = 1
             if self.Class == "Mage":
                 self.health += 10
                 self.health -= self.health // 100 * self.health % 100
@@ -61,4 +64,8 @@ class Player:
             elif self.Class == "Scout":
                 self.speed = 16
             else:
-                self.armour = 0.9
+                self.income_dmg_multiplier = 0.9
+        else:
+            self.is_ability_active = False
+            self.speed = 8
+            self.income_dmg_multiplier = 1
