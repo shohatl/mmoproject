@@ -14,6 +14,7 @@ class Mob:
         self.lvl = lvl
         self.is_alive = True
         self.is_melee = bool(random.randint(0, 1))
+        self.speed = 5 + 7 * int(self.is_melee)
         self.HP = 100 * self.lvl
         self.death_time = 0
         self.worth = 300 * self.lvl
@@ -30,6 +31,7 @@ class Mob:
     def move(self, players):
         if time.time() - self.last_time_moved < 10 ** -3:
             return
+        self.has_target = False
         # criteria for movement
         home_rect = pygame.Rect((0, 0), (self.home_range, self.home_range))
         home_rect.center = self.home_x, self.home_y
@@ -54,9 +56,9 @@ class Mob:
             self.target_x = self.home_x
             self.target_y = self.home_y
         # Actual procedure of movement
-        if bool(random.randint(0, 1)):
-            self.x += (self.target_x - self.x) / abs(self.target_x - self.x)
-        else:
-            self.y += (self.target_y - self.y) / abs(self.target_y - self.y)
-        if self.has_target and time.time() - self.last_attacked > 2:
-            spears.append(particle(self.x, self.y, self.target_x, self.target_y, "spear"))
+        if bool(random.randint(0, 1)) and self.x != self.target_x:
+            self.x += self.speed * (self.target_x - self.x) / abs(self.target_x - self.x)
+        elif self.y != self.target_y:
+            self.y += self.speed * (self.target_y - self.y) / abs(self.target_y - self.y)
+        # if self.has_target and time.time() - self.last_attacked > 2:
+        #     spears.append(particle(self.x, self.y, self.target_x, self.target_y, "spear"))
