@@ -60,6 +60,17 @@ class Mob:
             self.x += self.speed * (self.target_x - self.x) / abs(self.target_x - self.x)
         elif self.y != self.target_y:
             self.y += self.speed * (self.target_y - self.y) / abs(self.target_y - self.y)
-        if self.has_target and time.time() - self.last_attacked > 2 and not self.is_melee:
-            self.last_attacked = time.time()
-            self.spears.append(particle.Particle(self.x, self.y, self.target_x, self.target_y, 20, 800, self.lvl * 5, pygame.Rect((0, 0), (100, 50))))
+        if self.has_target and time.time() - self.last_attacked > 2:
+            if not self.is_melee:
+                self.last_attacked = time.time()
+                self.spears.append(particle.Particle(self.x, self.y, self.target_x, self.target_y, 20, 800, self.lvl * 5, pygame.Rect((0, 0), (100, 50))))
+            else:
+                M_rect = pygame.Rect((0, 0), (100, 100))
+                M_rect.center = self.x, self.y
+                for P in players:
+                    P_rect = pygame.Rect((0, 0), (100, 100))
+                    P_rect.center = P.x, P.y
+                    if P_rect.colliderect(M_rect):
+                        self.last_attacked = time.time()
+                        P.health -= 10
+                        P.health = P.health * int(P.health > 0)
