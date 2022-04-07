@@ -1,7 +1,5 @@
 import sys
-
 import pygame
-
 from Classes import player, mob
 
 pygame.init()

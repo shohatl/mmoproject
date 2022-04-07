@@ -11,6 +11,7 @@ class Particle:
         self.speed = speed
         self.range = range
         self.dmg = dmg
+        self.hit = False
         self.hit_box = hit_box
         self.hit_box.center = self.x, self.y
         self.last_moved = 0
