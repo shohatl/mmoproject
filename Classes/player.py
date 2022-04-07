@@ -58,13 +58,12 @@ class Player:
                 self.speed = 8
                 self.income_dmg_multiplier = 1
             if self.Class == "Mage":
-                self.health += 10
-                self.health -= self.health // 100 * self.health % 100
+                self.health = 100
                 self.is_ability_active = False
             elif self.Class == "Scout":
                 self.speed = 16
             else:
-                self.income_dmg_multiplier = 0.9
+                self.income_dmg_multiplier = 0
         else:
             self.is_ability_active = False
             self.speed = 8
