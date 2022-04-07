@@ -21,7 +21,7 @@ def identify_par_dmg(Ps: list, Ms: list):
                 if P_rect.colliderect(S.hit_box) and not S.hit:
                     M.spears.remove(S)
                     S.hit = True
-                    P.health -= 10
+                    P.health -= int(10 * P.income_dmg_multiplier)
                     P.health = P.health * int(P.health > 0)
     for P1 in Ps:
         for par in P1.projectiles:
@@ -42,8 +42,18 @@ def identify_par_dmg(Ps: list, Ms: list):
                         par.hit = True
                         if par.speed != 1:
                             P1.projectiles.remove(par)
-                        P2.health -= par.dmg
-                        P2.health = P2.health * int(P2.health > 0)
+                        P2.health -= par.dmg * P2.income_dmg_multiplier
+                        P2.health = int(P2.health * int(P2.health > 0))
+
+
+def show_mob_health(M: mob.Mob):
+    pygame.draw.rect(screen, (0, 255, 0), ((M.x - 50, M.y - 70), (M.health // M.lvl, 10)))
+    pygame.draw.rect(screen, (255, 0, 0), ((M.x - 50 + M.health // M.lvl, M.y - 70), (100 - M.health // M.lvl, 10)))
+
+
+def show_player_health(P: player.Player):
+    pygame.draw.rect(screen, (0, 255, 0), ((P.x - 50, P.y - 70), (P.health, 10)))
+    pygame.draw.rect(screen, (255, 0, 0), ((P.x - 50 + P.health, P.y - 70), (100 - P.health, 10)))
 
 
 def show_mob_lvl(M: mob.Mob):
@@ -51,6 +61,7 @@ def show_mob_lvl(M: mob.Mob):
     name_rect = name.get_rect()
     name_rect.center = M.x, M.y
     name_rect.y -= 70
+    name_rect.x -= 70
     screen.blit(name, name_rect)
 
 
@@ -58,7 +69,7 @@ def show_name(P: player.Player):
     name = font.render(P.nickname, True, (0, 0, 0))
     name_rect = name.get_rect()
     name_rect.center = P.x, P.y
-    name_rect.y -= 70
+    name_rect.y -= 90
     screen.blit(name, name_rect)
 
 
@@ -76,12 +87,16 @@ def main():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_e:
+                    P.use_ability()
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 P.attack(m_x, m_y)
         keys = pygame.key.get_pressed()
         P.dir_x = keys[pygame.K_d] - keys[pygame.K_a]
         P.dir_y = keys[pygame.K_s] - keys[pygame.K_w]
         P.move()
+        P.ability()
         P_rect.center = P.x, P.y
         players = [P]
         mobs = [M]
@@ -91,8 +106,9 @@ def main():
         pygame.draw.rect(screen, (0, 255, 0), M_rect)
         show_name(P)
         show_mob_lvl(M)
+        show_mob_health(M)
+        show_player_health(P)
         identify_par_dmg(players, mobs)
-        print(P.health)
         _ = P.inventory[P.picked]
         for par in P.projectiles:
             if par.range <= 0:
