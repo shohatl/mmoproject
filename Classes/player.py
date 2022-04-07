@@ -1,6 +1,5 @@
 import time
-from Classes import item
-from Classes import particle
+from Classes import item, particle
 
 # GLOBAL VARIABLES
 collide_list = [4, 5, 22, 23, 26, 39, 40, 41, 43, 57, 59, 60, 75, 76, 77, 78, 92, 93, 94, 95, 96]
@@ -12,7 +11,7 @@ class Player:
         self.y = 100
         self.dir_x = 0
         self.dir_y = 0
-        self.Class = "Tank"
+        self.Class = "Mage"
         self.last_time_used_ability = 0
         self.is_ability_active = False
         self.last_time_moved = 0
