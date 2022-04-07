@@ -1,6 +1,5 @@
 import time
-from Classes import item
-from Classes import particle
+from Classes import item, particle
 
 # GLOBAL VARIABLES
 collide_list = [4, 5, 22, 23, 26, 39, 40, 41, 43, 57, 59, 60, 75, 76, 77, 78, 92, 93, 94, 95, 96]

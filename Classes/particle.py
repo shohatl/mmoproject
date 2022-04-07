@@ -15,7 +15,7 @@ class Particle:
         self.last_moved = 0
         self.xVelocity = float(self.speed * math.cos(self.angle))
         self.yVelocity = float(self.speed * math.sin(self.angle))
-        self.angle *= 180 / math.pi
+        self.angle *= 180 / math.pi  # converted to degrees
 
     def move(self):
         if time.time() - self.last_moved > 10 ** -3:
