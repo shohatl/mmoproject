@@ -23,7 +23,7 @@ class Player:
         self.picked = 0
         self.inventory = [item.Item("bow", 1), False, False, False, False, False]  # to add items later
         self.gold = 0
-        self.health = 100 / 2
+        self.health = 100
         self.nickname = nickname
         self.ip = ip
         self.key = key
