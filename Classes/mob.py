@@ -14,7 +14,7 @@ class Mob:
         self.is_alive = True
         self.is_melee = bool(random.randint(0, 1))
         self.speed = 5 + 7 * int(self.is_melee)
-        self.HP = 100 * self.lvl
+        self.health = 100 * self.lvl
         self.death_time = 0
         self.worth = 300 * self.lvl
         self.last_time_moved = 0
