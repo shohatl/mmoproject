@@ -143,6 +143,7 @@ def main():
         identify_par_dmg(players, mobs)
         CL.tick(60)
         pygame.display.update()
+        # cringe
 
 
 if __name__ == '__main__':
