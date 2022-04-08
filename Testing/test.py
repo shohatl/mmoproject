@@ -20,6 +20,10 @@ chat_box = pygame.image.load('../Assets/basics/chatBox.png')
 chat_box = pygame.transform.scale(chat_box, (540, 30))
 
 
+def time_to_string(time):
+    return f'{int(time // 3600)}:{int(time // 60)}:{int(time // 1)}'
+
+
 def draw_gold(gold: int):
     screen.blit(gold_coin, (35, 950))
     screen.blit(silver_coin, (0, 1010))
@@ -113,11 +117,10 @@ def show_name(P: player.Player):
     screen.blit(name, name_rect)
 
 
-def move(P2: player.Player, P: player.Player, in_chat: bool):
+def move(P2: player.Player, P: player.Player):
     keys = pygame.key.get_pressed()
-    if not in_chat:
-        P.dir_x = keys[pygame.K_d] - keys[pygame.K_a]
-        P.dir_y = keys[pygame.K_s] - keys[pygame.K_w]
+    P.dir_x = keys[pygame.K_d] - keys[pygame.K_a]
+    P.dir_y = keys[pygame.K_s] - keys[pygame.K_w]
     P2.dir_x = keys[pygame.K_l] - keys[pygame.K_j]
     P2.dir_y = keys[pygame.K_k] - keys[pygame.K_i]
 
@@ -160,8 +163,12 @@ P_rect = pygame.Rect((0, 0), (100, 100))
 
 
 def main():
+    start_time = time.time()
+    chat_log = []
     frame_counter = 0
     in_chat = False
+    in_shop = False
+    chat_enabled = True
     chat_message = ''
     CL = pygame.time.Clock()
     P = player.Player("Hunnydrips", 0, 0)
@@ -182,11 +189,14 @@ def main():
                 pygame.quit()
                 sys.exit()
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN:
+                if event.key == pygame.K_RETURN and chat_enabled:
                     in_chat = not in_chat
                     if not in_chat:
                         if chat_message:
-                            print(chat_message)
+                            while len(chat_log) >= 5:
+                                chat_log = chat_log[1:]
+                            chat_log.append(
+                                f'({P.nickname}): {chat_message} [{time_to_string(time.time() - start_time)}]')
                             chat_message = ''
                     else:
                         P.dir_x = 0
@@ -194,6 +204,13 @@ def main():
                 elif in_chat:
                     if len(chat_message) < 45 and '~' >= event.unicode >= ' ':
                         chat_message += event.unicode
+                elif event.key == pygame.K_b:
+                    in_shop = not in_shop
+                    P.dir_y = 0
+                    P.dir_x = 0
+                    chat_enabled = not in_shop
+                elif event.key == pygame.K_TAB:
+                    chat_enabled = not chat_enabled
                 elif event.key == pygame.K_e:
                     P.use_ability()
             elif event.type == pygame.MOUSEBUTTONDOWN and not in_chat:
@@ -202,11 +219,17 @@ def main():
                 elif event.button == 3:
                     P2.attack(m_x, m_y)
 
-        move(P2, P, in_chat)  # client
+        if not in_chat and not in_shop:
+            move(P2, P)  # client
         move_all_players_and_their_particles(players)  # server
         move_all_mobs_and_their_spear(mobs, players)  # server
         identify_par_dmg(players, mobs)  # server
         keys = pygame.key.get_pressed()
+        if chat_enabled:
+            height_of_msg = 10
+            for msg in chat_log:
+                screen.blit(font.render(msg, True, (255, 255, 255)), (20, height_of_msg))
+                height_of_msg += 30
 
         if in_chat:
             if keys[pygame.K_BACKSPACE] and keys[pygame.K_LCTRL]:
