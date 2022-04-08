@@ -140,8 +140,9 @@ def main():
                 if event.key == pygame.K_RETURN:
                     in_chat = not in_chat
                     if not in_chat:
-                        print(chat_message)
-                        chat_message = ''
+                        if chat_message:
+                            print(chat_message)
+                            chat_message = ''
                     else:
                         P.dir_x = 0
                         P.dir_y = 0
