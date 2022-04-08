@@ -19,6 +19,8 @@ class Player:
         self.speed = 8
         self.income_dmg_multiplier = 1
         self.other_players_list = []
+        self.mobs_on_screen = []
+        self.particles_on_screen = []
         self.projectiles = []
         self.picked = 0
         self.inventory = [item.Item("bow", 1), False, False, False, False, False]  # to add items later
