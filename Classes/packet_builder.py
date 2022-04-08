@@ -101,7 +101,7 @@ def buildAllServer(player, chatMsg):
 
     return packet
 
-
+#mark is gay
 def buildAllClientWithAttack(player, mouseX, mouseY, chatMsg):
     packet = buildMoveP(player.x, player.y)
     packet += buildAttackP(mouseX, mouseY)
