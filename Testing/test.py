@@ -24,6 +24,12 @@ def time_to_string(time):
     return f'{int(time // 3600)}:{int(time // 60)}:{int(time // 1)}'
 
 
+def show_time(start_time):
+    text_rect = font.render(time_to_string(time.time() - start_time), True, (255, 255, 255)).get_rect()
+    text_rect.topright = screen.get_size()[0], 0
+    screen.blit(font.render(time_to_string(time.time() - start_time), True, (255, 255, 255)), text_rect)
+
+
 def draw_gold(gold: int):
     screen.blit(gold_coin, (35, 950))
     screen.blit(silver_coin, (0, 1010))
@@ -241,7 +247,7 @@ def main():
             if frame_counter < 30:
                 blinking_shit = '|'
             screen.blit(font.render(chat_message + blinking_shit, True, (255, 255, 255)), (13, 205))
-
+        show_time(start_time)
         draw_gold(P.gold)  # client
         CL.tick(60)
         pygame.display.update()
