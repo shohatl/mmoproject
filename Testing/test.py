@@ -38,7 +38,6 @@ def draw_gold(gold: int):
     screen.blit(toShow, (150, 970))
 
 
-
 def identify_par_dmg(Ps: list, Ms: list):
     """
     :param Ps: A list of all the players that exist in the game
@@ -126,7 +125,7 @@ def main():
         screen.fill((0, 0, 255))
         m_x, m_y = pygame.mouse.get_pos()
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 pygame.quit()
                 sys.exit()
             elif event.type == pygame.KEYDOWN:
