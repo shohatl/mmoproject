@@ -4,8 +4,39 @@ import pygame
 from Classes import player, mob
 
 pygame.init()
-screen = pygame.display.set_mode((800, 800))
+screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 font = pygame.font.Font("freesansbold.ttf", 20)
+font_gold = pygame.font.Font("freesansbold.ttf", 100)
+
+gold_coin = pygame.image.load('../Assets/coins/gold.png')
+silver_coin = pygame.image.load('../Assets/coins/silver.png')
+bronze_coin = pygame.image.load('../Assets/coins/bronze.png')
+
+gold_coin = pygame.transform.scale(gold_coin, (70, 70))
+silver_coin = pygame.transform.scale(silver_coin, (70, 70))
+bronze_coin = pygame.transform.scale(bronze_coin, (70, 70))
+
+
+def draw_gold(gold: int):
+    screen.blit(gold_coin, (35, 950))
+    screen.blit(silver_coin, (0, 1010))
+    screen.blit(bronze_coin, (70, 1010))
+    to_add = ''
+    if gold >= 1000000000:
+        gold = int(gold / 100000000)
+        gold /= 10.0
+        to_add = 'T'
+    elif gold >= 1000000:
+        gold = int(gold / 100000)
+        gold /= 10.0
+        to_add = 'M'
+    elif gold >= 1000:
+        gold = int(gold / 100)
+        gold /= 10
+        to_add = 'K'
+    toShow = font_gold.render(str(gold) + to_add, True, (255, 215, 0))
+    screen.blit(toShow, (150, 970))
+
 
 
 def identify_par_dmg(Ps: list, Ms: list):
@@ -118,7 +149,6 @@ def main():
             pygame.draw.rect(screen, (0, 255, 0), P_rect)
             show_player_health(Pl)
             show_name(Pl)
-            print(Pl.gold)
             for par in Pl.projectiles:
                 if par.range <= 0:
                     Pl.projectiles.remove(par)
@@ -141,6 +171,7 @@ def main():
                 spear.move()
                 pygame.draw.rect(screen, (255, 0, 0), spear.hit_box)
         identify_par_dmg(players, mobs)
+        draw_gold(P.gold)
         CL.tick(60)
         pygame.display.update()
         # cringe
