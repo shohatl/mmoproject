@@ -16,6 +16,9 @@ gold_coin = pygame.transform.scale(gold_coin, (70, 70))
 silver_coin = pygame.transform.scale(silver_coin, (70, 70))
 bronze_coin = pygame.transform.scale(bronze_coin, (70, 70))
 
+chat_box = pygame.image.load('../Assets/basics/chatBox.png')
+chat_box = pygame.transform.scale(chat_box, (540, 30))
+
 
 def draw_gold(gold: int):
     screen.blit(gold_coin, (35, 950))
@@ -111,6 +114,9 @@ def show_name(P: player.Player):
 
 
 def main():
+    frame_counter = 0
+    in_chat = False
+    chat_message = ''
     CL = pygame.time.Clock()
     P = player.Player("Hunnydrips", 0, 0)
     P2 = player.Player("Glidaria", 0, 0)
@@ -124,21 +130,36 @@ def main():
     while running:
         screen.fill((0, 0, 255))
         m_x, m_y = pygame.mouse.get_pos()
+        frame_counter += 1
+        frame_counter %= 60
         for event in pygame.event.get():
             if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 pygame.quit()
                 sys.exit()
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_e:
+                if event.key == pygame.K_RETURN:
+                    in_chat = not in_chat
+                    if not in_chat:
+                        print(chat_message)
+                        chat_message = ''
+                    else:
+                        P.dir_x = 0
+                        P.dir_y = 0
+                elif in_chat:
+                    if len(chat_message) < 45 and '~' >= event.unicode >= ' ':
+                        chat_message += event.unicode
+                elif event.key == pygame.K_e:
                     P.use_ability()
-            elif event.type == pygame.MOUSEBUTTONDOWN:
+            elif event.type == pygame.MOUSEBUTTONDOWN and not in_chat:
                 if event.button == 1:
                     P.attack(m_x, m_y)
                 elif event.button == 3:
                     P2.attack(m_x, m_y)
         keys = pygame.key.get_pressed()
-        P.dir_x = keys[pygame.K_d] - keys[pygame.K_a]
-        P.dir_y = keys[pygame.K_s] - keys[pygame.K_w]
+        if not in_chat:
+            P.dir_x = keys[pygame.K_d] - keys[pygame.K_a]
+            P.dir_y = keys[pygame.K_s] - keys[pygame.K_w]
+
         P2.dir_x = keys[pygame.K_l] - keys[pygame.K_j]
         P2.dir_y = keys[pygame.K_k] - keys[pygame.K_i]
         for Pl in players:
@@ -170,6 +191,15 @@ def main():
                 spear.move()
                 pygame.draw.rect(screen, (255, 0, 0), spear.hit_box)
         identify_par_dmg(players, mobs)
+
+        if in_chat:
+            if keys[pygame.K_BACKSPACE] and chat_message and not frame_counter % 4:
+                chat_message = chat_message[:-1]
+            screen.blit(chat_box, (10, 200))
+            blinking_shit = ''
+            if frame_counter < 30:
+                blinking_shit = '|'
+            screen.blit(font.render(chat_message + blinking_shit, True, (255, 255, 255)), (13, 205))
         draw_gold(P.gold)
         CL.tick(60)
         pygame.display.update()
