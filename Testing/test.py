@@ -35,10 +35,10 @@ def identify_par_dmg(Ps: list, Ms: list):
                     M.health -= par.dmg
                     M.health = M.health * int(M.health > 0)
             for P2 in Ps:
-                if P2.ip != P1.ip:
+                if P2.nickname != P1.nickname:
                     P2_rect = pygame.Rect((0, 0), (100, 100))
                     P2_rect.center = P2.x, P2.y
-                    if P2_rect.colliderect(P1) and not par.hit:
+                    if P2_rect.colliderect(par.hit_box) and not par.hit:
                         par.hit = True
                         if par.speed != 1:
                             P1.projectiles.remove(par)
@@ -75,9 +75,11 @@ def show_name(P: player.Player):
 
 def main():
     CL = pygame.time.Clock()
-    P = player.Player("Vise is gay", 0, 0)
+    P = player.Player("Hunnydrips", 0, 0)
+    P2 = player.Player("Glidaria", 0, 0)
     P_rect = pygame.Rect((0, 0), (100, 100))
     M = mob.Mob(50, 50, 5)
+    M2 = mob.Mob(500, 50, 3)
     M_rect = pygame.Rect((0, 0), (100, 100))
     running = True
     while running:
@@ -90,36 +92,42 @@ def main():
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_e:
                     P.use_ability()
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                P.attack(m_x, m_y)
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    P.attack(m_x, m_y)
+                elif event.button == 3:
+                    P2.attack(m_x, m_y)
         keys = pygame.key.get_pressed()
         P.dir_x = keys[pygame.K_d] - keys[pygame.K_a]
         P.dir_y = keys[pygame.K_s] - keys[pygame.K_w]
-        P.move()
-        P.ability()
-        P_rect.center = P.x, P.y
-        players = [P]
-        mobs = [M]
-        M.move(players)
-        M_rect.center = M.x, M.y
-        pygame.draw.rect(screen, (0, 255, 0), P_rect)
-        pygame.draw.rect(screen, (0, 255, 0), M_rect)
-        show_name(P)
-        show_mob_lvl(M)
-        show_mob_health(M)
-        show_player_health(P)
+        P2.dir_x = keys[pygame.K_l] - keys[pygame.K_j]
+        P2.dir_y = keys[pygame.K_k] - keys[pygame.K_i]
+        players = [P, P2]
+        for Pl in players:
+            Pl.move()
+            Pl.ability()
+            P_rect.center = Pl.x, Pl.y
+            pygame.draw.rect(screen, (0, 255, 0), P_rect)
+            show_player_health(Pl)
+            show_name(Pl)
+            for par in Pl.projectiles:
+                if par.range <= 0:
+                    Pl.projectiles.remove(par)
+                par.move()
+                pygame.draw.rect(screen, (255, 0, 0), par.hit_box)
+        mobs = [M, M2]
+        for Mo in mobs:
+            Mo.move(players)
+            M_rect.center = Mo.x, Mo.y
+            pygame.draw.rect(screen, (0, 255, 0), M_rect)
+            show_mob_lvl(Mo)
+            show_mob_health(Mo)
+            for spear in Mo.spears:
+                if spear.range <= 0:
+                    Mo.spears.remove(spear)
+                spear.move()
+                pygame.draw.rect(screen, (255, 0, 0), spear.hit_box)
         identify_par_dmg(players, mobs)
-        _ = P.inventory[P.picked]
-        for par in P.projectiles:
-            if par.range <= 0:
-                P.projectiles.remove(par)
-            par.move()
-            pygame.draw.rect(screen, (255, 0, 0), par.hit_box)
-        for spear in M.spears:
-            if spear.range <= 0:
-                M.spears.remove(spear)
-            spear.move()
-            pygame.draw.rect(screen, (255, 0, 0), spear.hit_box)
         CL.tick(60)
         pygame.display.update()
 
