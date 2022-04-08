@@ -11,7 +11,7 @@ class Player:
         self.y = 100
         self.dir_x = 0
         self.dir_y = 0
-        self.Class = "Tank"
+        self.Class = "Mage"
         self.last_time_used_ability = 0
         self.is_ability_active = False
         self.last_time_moved = 0
@@ -19,6 +19,8 @@ class Player:
         self.speed = 8
         self.income_dmg_multiplier = 1
         self.other_players_list = []
+        self.mobs_on_screen = []
+        self.particles_on_screen = []
         self.projectiles = []
         self.picked = 0
         self.inventory = [item.Item("bow", 1), False, False, False, False, False]  # to add items later
