@@ -113,6 +113,52 @@ def show_name(P: player.Player):
     screen.blit(name, name_rect)
 
 
+def move(P2: player.Player, P: player.Player, in_chat: bool):
+    keys = pygame.key.get_pressed()
+    if not in_chat:
+        P.dir_x = keys[pygame.K_d] - keys[pygame.K_a]
+        P.dir_y = keys[pygame.K_s] - keys[pygame.K_w]
+    P2.dir_x = keys[pygame.K_l] - keys[pygame.K_j]
+    P2.dir_y = keys[pygame.K_k] - keys[pygame.K_i]
+
+
+def move_all_players_and_their_particles(players: list):
+    for Pl in players:
+        Pl.move()
+        Pl.ability()
+        P_rect.center = Pl.x, Pl.y
+        pygame.draw.rect(screen, (0, 255, 0), P_rect)
+        show_player_health(Pl)
+        show_name(Pl)
+        for par in Pl.projectiles:
+            if par.range <= 0:
+                Pl.projectiles.remove(par)
+            par.move()
+            pygame.draw.rect(screen, (255, 0, 0), par.hit_box)
+
+
+def move_all_mobs_and_their_spear(mobs: list, players: list):
+    for Mo in mobs:
+        if Mo.is_alive:
+            Mo.move(players)
+            P_rect.center = Mo.x, Mo.y
+            pygame.draw.rect(screen, (0, 255, 0), P_rect)
+            show_mob_lvl(Mo)
+            show_mob_health(Mo)
+        elif time.time() - Mo.death_time >= 7:
+            Mo.is_alive = True
+            Mo.x, Mo.y = Mo.home_x, Mo.home_y
+            Mo.health = 100 * Mo.lvl
+        for spear in Mo.spears:
+            if spear.range <= 0:
+                Mo.spears.remove(spear)
+            spear.move()
+            pygame.draw.rect(screen, (255, 0, 0), spear.hit_box)
+
+
+P_rect = pygame.Rect((0, 0), (100, 100))
+
+
 def main():
     frame_counter = 0
     in_chat = False
@@ -120,10 +166,9 @@ def main():
     CL = pygame.time.Clock()
     P = player.Player("Hunnydrips", 0, 0)
     P2 = player.Player("Glidaria", 0, 0)
-    P_rect = pygame.Rect((0, 0), (100, 100))
+
     M = mob.Mob(50, 50, 5)
     M2 = mob.Mob(500, 50, 3)
-    M_rect = pygame.Rect((0, 0), (100, 100))
     players = [P, P2]
     mobs = [M, M2]
     running = True
@@ -156,44 +201,16 @@ def main():
                     P.attack(m_x, m_y)
                 elif event.button == 3:
                     P2.attack(m_x, m_y)
-        keys = pygame.key.get_pressed()
-        if not in_chat:
-            P.dir_x = keys[pygame.K_d] - keys[pygame.K_a]
-            P.dir_y = keys[pygame.K_s] - keys[pygame.K_w]
 
-        P2.dir_x = keys[pygame.K_l] - keys[pygame.K_j]
-        P2.dir_y = keys[pygame.K_k] - keys[pygame.K_i]
-        for Pl in players:
-            Pl.move()
-            Pl.ability()
-            P_rect.center = Pl.x, Pl.y
-            pygame.draw.rect(screen, (0, 255, 0), P_rect)
-            show_player_health(Pl)
-            show_name(Pl)
-            for par in Pl.projectiles:
-                if par.range <= 0:
-                    Pl.projectiles.remove(par)
-                par.move()
-                pygame.draw.rect(screen, (255, 0, 0), par.hit_box)
-        for Mo in mobs:
-            if Mo.is_alive:
-                Mo.move(players)
-                M_rect.center = Mo.x, Mo.y
-                pygame.draw.rect(screen, (0, 255, 0), M_rect)
-                show_mob_lvl(Mo)
-                show_mob_health(Mo)
-            elif time.time() - Mo.death_time >= 7:
-                Mo.is_alive = True
-                Mo.x, Mo.y = Mo.home_x, Mo.home_y
-                Mo.health = 100 * Mo.lvl
-            for spear in Mo.spears:
-                if spear.range <= 0:
-                    Mo.spears.remove(spear)
-                spear.move()
-                pygame.draw.rect(screen, (255, 0, 0), spear.hit_box)
-        identify_par_dmg(players, mobs)
+        move(P2, P, in_chat)  # client
+        move_all_players_and_their_particles(players)  # server
+        move_all_mobs_and_their_spear(mobs, players)  # server
+        identify_par_dmg(players, mobs)  # server
+        keys = pygame.key.get_pressed()
 
         if in_chat:
+            if keys[pygame.K_BACKSPACE] and keys[pygame.K_LCTRL]:
+                chat_message = ''
             if keys[pygame.K_BACKSPACE] and chat_message and not frame_counter % 4:
                 chat_message = chat_message[:-1]
             screen.blit(chat_box, (10, 200))
@@ -201,10 +218,10 @@ def main():
             if frame_counter < 30:
                 blinking_shit = '|'
             screen.blit(font.render(chat_message + blinking_shit, True, (255, 255, 255)), (13, 205))
-        draw_gold(P.gold)
+
+        draw_gold(P.gold)  # client
         CL.tick(60)
         pygame.display.update()
-        # cringe
 
 
 if __name__ == '__main__':
