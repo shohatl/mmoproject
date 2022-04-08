@@ -17,7 +17,40 @@ silver_coin = pygame.transform.scale(silver_coin, (70, 70))
 bronze_coin = pygame.transform.scale(bronze_coin, (70, 70))
 
 chat_box = pygame.image.load('../Assets/basics/chatBox.png')
+
 chat_box = pygame.transform.scale(chat_box, (540, 30))
+
+icon_bow = pygame.image.load('../Assets/icons/icon-bow.png')
+icon_dagger = pygame.image.load('../Assets/icons/icon-dagger.png')
+icon_snowball = pygame.image.load('../Assets/icons/icon-cumball.png')
+
+icon_bow = pygame.transform.scale(icon_bow, (70, 70))
+icon_dagger = pygame.transform.scale(icon_dagger, (70, 70))
+icon_snowball = pygame.transform.scale(icon_snowball, (70, 70))
+
+
+def show_inverntory(P: player.Player):
+    slot_rect = pygame.Rect((screen.get_size()[0] - 490, screen.get_size()[1] - 90), (90, 90))
+    in_hand_x, in_hand_y = 0, 0
+    for i, I in enumerate(P.inventory):
+        pygame.draw.rect(screen, (100, 100, 100), slot_rect, 10)
+        if i == P.picked:
+            in_hand_x = slot_rect.x
+            in_hand_y = slot_rect.y
+        if I:
+            slot_rect.x += 10
+            slot_rect.y += 10
+            if I.name == 'bow':
+                screen.blit(icon_bow, slot_rect)
+            elif I.name == 'dagger':
+                screen.blit(icon_dagger, slot_rect)
+            else:
+                screen.blit(icon_snowball, slot_rect)
+            screen.blit(font.render(str(I.lvl), True, (255, 255, 255)), slot_rect)
+            slot_rect.x -= 10
+            slot_rect.y -= 10
+        slot_rect.x += 80
+    pygame.draw.rect(screen, (255, 255, 255), ((in_hand_x, in_hand_y), (90, 90)), 10)
 
 
 def time_to_string(time):
@@ -219,6 +252,8 @@ def main():
                     chat_enabled = not chat_enabled
                 elif event.key == pygame.K_e:
                     P.use_ability()
+                elif pygame.K_1 <= event.key <= pygame.K_6 and P.inventory[int(event.unicode) - 1]:
+                    P.picked = int(event.unicode) - 1
             elif event.type == pygame.MOUSEBUTTONDOWN and not in_chat:
                 if event.button == 1:
                     P.attack(m_x, m_y)
@@ -247,6 +282,8 @@ def main():
             if frame_counter < 30:
                 blinking_shit = '|'
             screen.blit(font.render(chat_message + blinking_shit, True, (255, 255, 255)), (13, 205))
+
+        show_inverntory(P)
         show_time(start_time)
         draw_gold(P.gold)  # client
         CL.tick(60)

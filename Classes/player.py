@@ -23,7 +23,7 @@ class Player:
         self.particles_on_screen = []
         self.projectiles = []
         self.picked = 0
-        self.inventory = [item.Item("bow", 1), False, False, False, False, False]  # to add items later
+        self.inventory = [item.Item("bow", 1), False, item.Item('snowball', 69), False, False, item.Item('dagger', 3)]  # to add items later
         self.gold = 0
         self.health = 100
         self.nickname = nickname
