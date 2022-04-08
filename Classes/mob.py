@@ -55,6 +55,9 @@ class Mob:
         else:
             self.target_x = self.home_x
             self.target_y = self.home_y
+        if not self.has_target:
+            self.target_x = self.home_x
+            self.target_y = self.home_y
         # Actual procedure of movement
         if bool(random.randint(0, 1)) and self.x != self.target_x:
             self.x += self.speed * (self.target_x - self.x) / abs(self.target_x - self.x)
@@ -73,4 +76,5 @@ class Mob:
                     if P_rect.colliderect(M_rect):
                         self.last_attacked = time.time()
                         P.health -= 10
-                        P.health = P.health * int(P.health > 0)
+                        if P.health <= 0:
+                            players.remove(P)
