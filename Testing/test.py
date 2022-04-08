@@ -1,4 +1,5 @@
 import sys
+import time
 import pygame
 from Classes import player, mob
 
@@ -22,18 +23,23 @@ def identify_par_dmg(Ps: list, Ms: list):
                     M.spears.remove(S)
                     S.hit = True
                     P.health -= int(10 * P.income_dmg_multiplier)
-                    P.health = P.health * int(P.health > 0)
+                    if P.health <= 0:
+                        Ps.remove(P)
     for P1 in Ps:
         for par in P1.projectiles:
             for M in Ms:
-                M_rect = pygame.Rect((0, 0), (100, 100))
-                M_rect.center = M.x, M.y
-                if M_rect.colliderect(par.hit_box) and not par.hit:
-                    par.hit = True
-                    if par.speed != 1:
-                        P1.projectiles.remove(par)
-                    M.health -= par.dmg
-                    M.health = M.health * int(M.health > 0)
+                if M.is_alive:
+                    M_rect = pygame.Rect((0, 0), (100, 100))
+                    M_rect.center = M.x, M.y
+                    if M_rect.colliderect(par.hit_box) and not par.hit:
+                        par.hit = True
+                        if par.speed != 1:
+                            P1.projectiles.remove(par)
+                        M.health -= par.dmg
+                        if M.health <= 0:
+                            P1.gold += M.worth
+                            M.death_time = time.time()
+                            M.is_alive = False
             for P2 in Ps:
                 if P2.nickname != P1.nickname:
                     P2_rect = pygame.Rect((0, 0), (100, 100))
@@ -42,8 +48,9 @@ def identify_par_dmg(Ps: list, Ms: list):
                         par.hit = True
                         if par.speed != 1:
                             P1.projectiles.remove(par)
-                        P2.health -= par.dmg * P2.income_dmg_multiplier
-                        P2.health = int(P2.health * int(P2.health > 0))
+                        P2.health -= int(par.dmg * P2.income_dmg_multiplier)
+                        if P2.health <= 0:
+                            Ps.remove(P2)
 
 
 def show_mob_health(M: mob.Mob):
@@ -81,6 +88,8 @@ def main():
     M = mob.Mob(50, 50, 5)
     M2 = mob.Mob(500, 50, 3)
     M_rect = pygame.Rect((0, 0), (100, 100))
+    players = [P, P2]
+    mobs = [M, M2]
     running = True
     while running:
         screen.fill((0, 0, 255))
@@ -102,7 +111,6 @@ def main():
         P.dir_y = keys[pygame.K_s] - keys[pygame.K_w]
         P2.dir_x = keys[pygame.K_l] - keys[pygame.K_j]
         P2.dir_y = keys[pygame.K_k] - keys[pygame.K_i]
-        players = [P, P2]
         for Pl in players:
             Pl.move()
             Pl.ability()
@@ -110,18 +118,23 @@ def main():
             pygame.draw.rect(screen, (0, 255, 0), P_rect)
             show_player_health(Pl)
             show_name(Pl)
+            print(Pl.gold)
             for par in Pl.projectiles:
                 if par.range <= 0:
                     Pl.projectiles.remove(par)
                 par.move()
                 pygame.draw.rect(screen, (255, 0, 0), par.hit_box)
-        mobs = [M, M2]
         for Mo in mobs:
-            Mo.move(players)
-            M_rect.center = Mo.x, Mo.y
-            pygame.draw.rect(screen, (0, 255, 0), M_rect)
-            show_mob_lvl(Mo)
-            show_mob_health(Mo)
+            if Mo.is_alive:
+                Mo.move(players)
+                M_rect.center = Mo.x, Mo.y
+                pygame.draw.rect(screen, (0, 255, 0), M_rect)
+                show_mob_lvl(Mo)
+                show_mob_health(Mo)
+            elif time.time() - Mo.death_time >= 7:
+                Mo.is_alive = True
+                Mo.x, Mo.y = Mo.home_x, Mo.home_y
+                Mo.health = 100 * Mo.lvl
             for spear in Mo.spears:
                 if spear.range <= 0:
                     Mo.spears.remove(spear)
