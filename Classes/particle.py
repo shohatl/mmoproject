@@ -1,6 +1,6 @@
 import math
 import time
-#
+
 
 class Particle:
     def __init__(self, x, y, target_x, target_y, speed, range, dmg, hit_box):
