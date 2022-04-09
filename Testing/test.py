@@ -1,8 +1,10 @@
-import sys
 import random
+import sys
 import time
+
 import pygame
-from Classes import player, mob, item
+
+from Classes import player, mob, item, button
 
 pygame.init()
 screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
@@ -24,7 +26,7 @@ chat_box = pygame.transform.scale(chat_box, (540, 30))
 
 shop_menu = pygame.image.load('../Assets/shop/shop.png')
 
-shop_menu = pygame.transform.scale(shop_menu, (1000, 700))
+shop_menu = pygame.transform.scale(shop_menu, (560, 370))
 
 icon_bow = pygame.image.load('../Assets/icons/icon-bow.png')
 icon_dagger = pygame.image.load('../Assets/icons/icon-dagger.png')
@@ -35,64 +37,8 @@ icon_dagger = pygame.transform.scale(icon_dagger, (70, 70))
 icon_snowball = pygame.transform.scale(icon_snowball, (70, 70))
 
 
-def show_inventory(P: player.Player):
-    slot_rect = pygame.Rect((screen.get_size()[0] - 490, screen.get_size()[1] - 90), (90, 90))
-    in_hand_x, in_hand_y = 0, 0
-    average = 0
-    amount_of_items = 0
-    for i, I in enumerate(P.inventory):
-        pygame.draw.rect(screen, (100, 100, 100), slot_rect, 10)
-        if i == P.picked:
-            in_hand_x = slot_rect.x
-            in_hand_y = slot_rect.y
-        if I:
-            average += I.lvl
-            amount_of_items += 1
-            slot_rect.x += 10
-            slot_rect.y += 10
-            if I.name == 'bow':
-                screen.blit(icon_bow, slot_rect)
-            elif I.name == 'dagger':
-                screen.blit(icon_dagger, slot_rect)
-            else:
-                screen.blit(icon_snowball, slot_rect)
-            screen.blit(font.render(str(I.lvl), True, (255, 255, 255)), slot_rect)
-            slot_rect.x -= 10
-            slot_rect.y -= 10
-        slot_rect.x += 80
-    pygame.draw.rect(screen, (255, 255, 255), ((in_hand_x, in_hand_y), (90, 90)), 10)
-    return average // amount_of_items
-
-
-def time_to_string(time):
-    return f'{int(time // 3600)}:{int(time // 60)}:{int(time // 1)}'
-
-
-def show_time(start_time):
-    text_rect = font.render(time_to_string(time.time() - start_time), True, (255, 255, 255)).get_rect()
-    text_rect.topright = screen.get_size()[0], 0
-    screen.blit(font.render(time_to_string(time.time() - start_time), True, (255, 255, 255)), text_rect)
-
-
-def show_gold(gold: int):
-    screen.blit(gold_coin, (35, screen.get_height() - 130))
-    screen.blit(silver_coin, (0, screen.get_height() - 70))
-    screen.blit(bronze_coin, (70, screen.get_height() - 70))
-    to_add = ''
-    if gold >= 1000000000:
-        gold = int(gold / 100000000)
-        gold /= 10.0
-        to_add = 'T'
-    elif gold >= 1000000:
-        gold = int(gold / 100000)
-        gold /= 10.0
-        to_add = 'M'
-    elif gold >= 1000:
-        gold = int(gold / 100)
-        gold /= 10
-        to_add = 'K'
-    toShow = font_gold.render(str(gold) + to_add, True, (255, 215, 0))
-    screen.blit(toShow, (150, screen.get_height() - 110))
+def time_to_string(t):
+    return f'{int(t // 3600)}:{int(t // 60)}:{int(t // 1)}'
 
 
 def identify_par_dmg(Ps: list, Ms: list):
@@ -147,6 +93,62 @@ def show_mob_health(M: mob.Mob):
 def show_player_health(P: player.Player):
     pygame.draw.rect(screen, (0, 255, 0), ((P.x - 50, P.y - 70), (P.health, 10)))
     pygame.draw.rect(screen, (255, 0, 0), ((P.x - 50 + P.health, P.y - 70), (100 - P.health, 10)))
+
+
+def show_inventory(P: player.Player):
+    slot_rect = pygame.Rect((screen.get_size()[0] - 490, screen.get_size()[1] - 90), (90, 90))
+    in_hand_x, in_hand_y = 0, 0
+    average = 0
+    amount_of_items = 0
+    for i, I in enumerate(P.inventory):
+        pygame.draw.rect(screen, (100, 100, 100), slot_rect, 10)
+        if i == P.picked:
+            in_hand_x = slot_rect.x
+            in_hand_y = slot_rect.y
+        if I:
+            average += I.lvl
+            amount_of_items += 1
+            slot_rect.x += 10
+            slot_rect.y += 10
+            if I.name == 'bow':
+                screen.blit(icon_bow, slot_rect)
+            elif I.name == 'dagger':
+                screen.blit(icon_dagger, slot_rect)
+            else:
+                screen.blit(icon_snowball, slot_rect)
+            screen.blit(font.render(str(I.lvl), True, (255, 255, 255)), slot_rect)
+            slot_rect.x -= 10
+            slot_rect.y -= 10
+        slot_rect.x += 80
+    pygame.draw.rect(screen, (255, 255, 255), ((in_hand_x, in_hand_y), (90, 90)), 10)
+    return average // amount_of_items
+
+
+def show_time(start_time):
+    text_rect = font.render(time_to_string(time.time() - start_time), True, (255, 255, 255)).get_rect()
+    text_rect.topright = screen.get_size()[0], 0
+    screen.blit(font.render(time_to_string(time.time() - start_time), True, (255, 255, 255)), text_rect)
+
+
+def show_gold(gold: int):
+    screen.blit(gold_coin, (35, screen.get_height() - 130))
+    screen.blit(silver_coin, (0, screen.get_height() - 70))
+    screen.blit(bronze_coin, (70, screen.get_height() - 70))
+    to_add = ''
+    if gold >= 1000000000:
+        gold = int(gold / 100000000)
+        gold /= 10.0
+        to_add = 'T'
+    elif gold >= 1000000:
+        gold = int(gold / 100000)
+        gold /= 10.0
+        to_add = 'M'
+    elif gold >= 1000:
+        gold = int(gold / 100)
+        gold /= 10
+        to_add = 'K'
+    toShow = font_gold.render(str(gold) + to_add, True, (255, 215, 0))
+    screen.blit(toShow, (150, screen.get_height() - 110))
 
 
 def show_mob_lvl(M: mob.Mob):
@@ -221,6 +223,7 @@ def move_all_mobs_and_their_spear(mobs: list, players: list):
 def main():
     start_time = time.time()
     chat_log = []
+    buttons = []
     frame_counter = 0
     in_chat = False
     in_shop = False
@@ -268,7 +271,29 @@ def main():
                     chat_enabled = not in_shop
                     if in_shop:
                         item_for_offer = generate_offer(average)
-                        print(item_for_offer.lvl, item_for_offer.name)
+                        if not buttons:
+                            if item_for_offer.name == "bow":
+                                buttons.append(
+                                    button.Button(screen.get_width() // 2, screen.get_height() // 2 - 90, icon_bow))
+                            elif item_for_offer.name == "dagger":
+                                buttons.append(
+                                    button.Button(screen.get_width() // 2, screen.get_height() // 2 - 90, icon_dagger))
+                            else:
+                                buttons.append(button.Button(screen.get_width() // 2, screen.get_height() // 2 - 90,
+                                                             icon_snowball))
+                            for i, I in enumerate(P.inventory):
+                                if I:
+                                    if I.name == "bow":
+                                        buttons.append(button.Button(screen.get_width() // 2 + 90 * (i - 2.5),
+                                                                     screen.get_height() // 2 + 70, icon_bow))
+                                    elif I.name == "dagger":
+                                        buttons.append(button.Button(screen.get_width() // 2 + 90 * (i - 2.5),
+                                                                     screen.get_height() // 2 + 70, icon_dagger))
+                                    else:
+                                        buttons.append(button.Button(screen.get_width() // 2 + 90 * (i - 2.5),
+                                                                     screen.get_height() // 2 + 70, icon_snowball))
+                    else:
+                        buttons = []
                 elif event.key == pygame.K_TAB:
                     chat_enabled = not chat_enabled
                 elif event.key == pygame.K_e:
@@ -284,6 +309,10 @@ def main():
             shop_rect = shop_menu.get_rect()
             shop_rect.center = screen.get_width() // 2, screen.get_height() // 2
             screen.blit(shop_menu, shop_rect)
+            for B in buttons:
+                B.show_button(screen)
+                if B.check_press():
+                    print('pressed')
         if not in_chat and not in_shop:
             move(P2, P)  # client
         move_all_players_and_their_particles(players)  # server
@@ -307,8 +336,8 @@ def main():
                 blinking_shit = '|'
             screen.blit(font.render(chat_message + blinking_shit, True, (255, 255, 255)), (13, 205))
 
-        average = show_inventory(P)
-        show_time(start_time)
+        average = show_inventory(P)  # client
+        show_time(start_time)  # client
         show_gold(P.gold)  # client
         CL.tick(60)
         pygame.display.update()
