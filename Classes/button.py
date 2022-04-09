@@ -1,4 +1,5 @@
 import pygame
+from Classes import item
 
 
 class Button:
@@ -9,13 +10,16 @@ class Button:
         self.pressed = False
 
     def show_button(self, screen):
-        screen.blit(self.button_image, (self.x, self.y))
+        tmp = self.button_image.get_rect()
+        tmp.center = self.x, self.y
+        screen.blit(self.button_image, tmp)
 
     def check_press(self):
         rect = self.button_image.get_rect()
-        rect.topleft = self.x, self.y
+        rect.center = self.x, self.y
         if pygame.mouse.get_pressed()[0] == 1 and not self.pressed and rect.collidepoint(pygame.mouse.get_pos()):
             self.pressed = True
-        if not pygame.mouse.get_pressed()[0]:
+            return True
+        elif not pygame.mouse.get_pressed()[0]:
             self.pressed = False
         return False
