@@ -63,10 +63,10 @@ def show_time(start_time):
     screen.blit(font.render(time_to_string(time.time() - start_time), True, (255, 255, 255)), text_rect)
 
 
-def draw_gold(gold: int):
-    screen.blit(gold_coin, (35, 950))
-    screen.blit(silver_coin, (0, 1010))
-    screen.blit(bronze_coin, (70, 1010))
+def show_gold(gold: int):
+    screen.blit(gold_coin, (35, screen.get_height() - 130))
+    screen.blit(silver_coin, (0, screen.get_height() - 70))
+    screen.blit(bronze_coin, (70, screen.get_height() - 70))
     to_add = ''
     if gold >= 1000000000:
         gold = int(gold / 100000000)
@@ -81,7 +81,7 @@ def draw_gold(gold: int):
         gold /= 10
         to_add = 'K'
     toShow = font_gold.render(str(gold) + to_add, True, (255, 215, 0))
-    screen.blit(toShow, (150, 970))
+    screen.blit(toShow, (150, screen.get_height() - 110))
 
 
 def identify_par_dmg(Ps: list, Ms: list):
@@ -285,7 +285,7 @@ def main():
 
         show_inverntory(P)
         show_time(start_time)
-        draw_gold(P.gold)  # client
+        show_gold(P.gold)  # client
         CL.tick(60)
         pygame.display.update()
 
