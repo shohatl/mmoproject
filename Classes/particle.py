@@ -1,6 +1,6 @@
 import math
 import time
-
+#
 
 class Particle:
     def __init__(self, x, y, target_x, target_y, speed, range, dmg, hit_box):
@@ -9,6 +9,7 @@ class Particle:
         self.angle = math.atan2(float(self.y - target_y), float(self.x - target_x))
         self.speed = speed
         self.range = range
+        self.hit = False
         self.dmg = dmg
         self.hit_box = hit_box
         self.hit_box.center = self.x, self.y
