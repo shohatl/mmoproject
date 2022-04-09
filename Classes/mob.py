@@ -1,8 +1,7 @@
 import random
 import time
 import pygame
-
-spears = []
+from Classes import particle
 
 
 class Mob:
@@ -14,7 +13,8 @@ class Mob:
         self.lvl = lvl
         self.is_alive = True
         self.is_melee = bool(random.randint(0, 1))
-        self.HP = 100 * self.lvl
+        self.speed = 5 + 7 * int(self.is_melee)
+        self.health = 100 * self.lvl
         self.death_time = 0
         self.worth = 300 * self.lvl
         self.last_time_moved = 0
@@ -26,10 +26,12 @@ class Mob:
         self.home_y = self.y
         self.trigger_range = 1200 + 600 * int(self.is_melee)
         self.home_range = 1000 + 1000 * int(self.is_melee)
+        self.spears = []
 
     def move(self, players):
         if time.time() - self.last_time_moved < 10 ** -3:
             return
+        self.has_target = False
         # criteria for movement
         home_rect = pygame.Rect((0, 0), (self.home_range, self.home_range))
         home_rect.center = self.home_x, self.home_y
@@ -53,10 +55,26 @@ class Mob:
         else:
             self.target_x = self.home_x
             self.target_y = self.home_y
+        if not self.has_target:
+            self.target_x = self.home_x
+            self.target_y = self.home_y
         # Actual procedure of movement
-        if bool(random.randint(0, 1)):
-            self.x += (self.target_x - self.x) / abs(self.target_x - self.x)
-        else:
-            self.y += (self.target_y - self.y) / abs(self.target_y - self.y)
+        if bool(random.randint(0, 1)) and self.x != self.target_x:
+            self.x += self.speed * (self.target_x - self.x) / abs(self.target_x - self.x)
+        elif self.y != self.target_y:
+            self.y += self.speed * (self.target_y - self.y) / abs(self.target_y - self.y)
         if self.has_target and time.time() - self.last_attacked > 2:
-            spears.append(particle(self.x, self.y, self.target_x, self.target_y, "spear"))
+            if not self.is_melee:
+                self.last_attacked = time.time()
+                self.spears.append(particle.Particle(self.x, self.y, self.target_x, self.target_y, 20, 800, self.lvl * 5, pygame.Rect((0, 0), (100, 50))))
+            else:
+                M_rect = pygame.Rect((0, 0), (100, 100))
+                M_rect.center = self.x, self.y
+                for P in players:
+                    P_rect = pygame.Rect((0, 0), (100, 100))
+                    P_rect.center = P.x, P.y
+                    if P_rect.colliderect(M_rect):
+                        self.last_attacked = time.time()
+                        P.health -= 10
+                        if P.health <= 0:
+                            players.remove(P)
