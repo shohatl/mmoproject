@@ -175,7 +175,7 @@ def move_all_players_and_their_particles(players: list):
         for par in Pl.projectiles:
             if par.range <= 0:
                 Pl.projectiles.remove(par)
-            par.move()
+            par.move(Pl.x, Pl.y)
             pygame.draw.rect(screen, (255, 0, 0), par.hit_box)
 
 
@@ -194,7 +194,7 @@ def move_all_mobs_and_their_spear(mobs: list, players: list):
         for spear in Mo.spears:
             if spear.range <= 0:
                 Mo.spears.remove(spear)
-            spear.move()
+            spear.move(0, 0)
             pygame.draw.rect(screen, (255, 0, 0), spear.hit_box)
 
 
