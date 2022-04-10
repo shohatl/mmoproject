@@ -11,7 +11,6 @@ class Mob:
         self.dir_x = 0
         self.dir_y = 0
         self.lvl = lvl
-        self.is_alive = True
         self.is_melee = bool(random.randint(0, 1))
         self.speed = 5 + 7 * int(self.is_melee)
         self.health = 100 * self.lvl
@@ -19,7 +18,9 @@ class Mob:
         self.worth = 300 * self.lvl
         self.last_time_moved = 0
         self.last_attacked = 0
+        self.is_alive = True
         self.has_target = False
+        self.has_moved = False
         self.target_x = 0
         self.target_y = 0
         self.home_x = self.x
@@ -30,7 +31,9 @@ class Mob:
 
     def move(self, players):
         if time.time() - self.last_time_moved < 10 ** -3:
+            self.has_moved = False
             return
+        self.has_moved = True
         self.has_target = False
         # criteria for movement
         home_rect = pygame.Rect((0, 0), (self.home_range, self.home_range))
