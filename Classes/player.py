@@ -22,6 +22,7 @@ class Player:
         self.mobs_on_screen = []
         self.particles_on_screen = []
         self.projectiles = []
+        self.has_moved = False
         self.picked = 0
         self.inventory = [item.Item("bow", 1), item.Item('snowball', 90), item.Item('snowball', 69), False, False, item.Item('dagger', 3)]  # to add items later
         self.gold = 0
@@ -34,7 +35,9 @@ class Player:
         return int(map[self.y // 64][self.x // 64]) in collide_list
 
     def move(self):
+        self.has_moved = False
         if time.time() - self.last_time_moved > 10 ** -3:
+            self.has_moved = True
             self.x += self.speed * self.dir_x
             # if self.check_collision():
             #     self.x -= self.dir_x
