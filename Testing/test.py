@@ -260,7 +260,7 @@ def main():
                 elif event.key == pygame.K_e:
                     P.use_ability()
                 elif event.key == pygame.K_x and P.picked:
-                    P.gold += P.inventory[P.picked].upgrade_cost * 0.75
+                    P.gold += P.inventory[P.picked].upgrade_cost * 0.7
                     P.inventory[P.picked] = False
                     P.picked = 0
                 elif event.key == pygame.K_q:
