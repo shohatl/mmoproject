@@ -69,7 +69,7 @@ class Mob:
         if self.has_target and time.time() - self.last_attacked > 2:
             if not self.is_melee:
                 self.last_attacked = time.time()
-                self.spears.append(particle.Particle(self.x, self.y, self.target_x, self.target_y, 20, 800, self.lvl * 5, pygame.Rect((0, 0), (100, 50))))
+                self.spears.append(particle.Particle(self.x, self.y, self.target_x, self.target_y, 20, 800, self.lvl * 5, 'spear'))
             else:
                 M_rect = pygame.Rect((0, 0), (100, 100))
                 M_rect.center = self.x, self.y
