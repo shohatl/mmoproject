@@ -258,13 +258,19 @@ def main():
                     chat_enabled = not chat_enabled
                 elif event.key == pygame.K_e:
                     P.use_ability()
-                elif pygame.K_1 <= event.key <= pygame.K_6 and P.inventory[int(event.unicode) - 1]:
+                elif event.key == pygame.K_x and P.picked:
+                    P.inventory[P.picked] = False
+                    P.picked = 0
+                elif event.key == pygame.K_q:
+                    for I in items_on_surface:
+                        if I.check_pick_up(P):
+                            P.inventory[P.picked] = item.Item(I.name, I.lvl)
+                            items_on_surface.remove(I)
+                            break
+                elif pygame.K_1 <= event.key <= pygame.K_6:
                     P.picked = int(event.unicode) - 1
-            elif event.type == pygame.MOUSEBUTTONDOWN and not in_chat:
-                if event.button == 1:
-                    P.attack(m_x, m_y)
-                elif event.button == 3:
-                    P2.attack(m_x, m_y)
+            elif event.type == pygame.MOUSEBUTTONDOWN and not in_chat and event.button == 1 and P.inventory[P.picked]:
+                P.attack(m_x, m_y)
         if not in_chat:
             move(P2, P)  # client
         move_all_players_and_their_particles(players)  # server
