@@ -1,9 +1,10 @@
 import math
 import time
+import pygame
 
 
 class Particle:
-    def __init__(self, x, y, target_x, target_y, speed, range, dmg, hit_box):
+    def __init__(self, x, y, target_x, target_y, speed, range, dmg, name):
         self.x = x
         self.y = y
         self.angle = math.atan2(float(self.y - target_y), float(self.x - target_x))
@@ -11,12 +12,14 @@ class Particle:
         self.range = range
         self.hit = False
         self.dmg = dmg
-        self.hit_box = hit_box
-        self.hit_box.center = self.x, self.y
         self.last_moved = 0
         self.velocity_x = float(self.speed * math.cos(self.angle))
         self.velocity_y = float(self.speed * math.sin(self.angle))
-        self.angle *= 180 / math.pi
+        self.angle *= -180 / math.pi
+        self.image = pygame.image.load(f'../Assets/weapons/{name}.png')
+        self.image = pygame.transform.rotate(self.image, self.angle)
+        self.hit_box = self.image.get_rect()
+        self.hit_box.center = self.x, self.y
 
     def move(self, x, y):
         if time.time() - self.last_moved > 10 ** -3:
