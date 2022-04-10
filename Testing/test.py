@@ -192,7 +192,7 @@ def move_all_players_and_their_particles(players: list):
             if par.range <= 0:
                 Pl.projectiles.remove(par)
             par.move(Pl.x, Pl.y)
-            pygame.draw.rect(screen, (255, 0, 0), par.hit_box)
+            screen.blit(par.image, par.hit_box)
 
 
 def move_all_mobs_and_their_spear(mobs: list, players: list):
@@ -211,7 +211,7 @@ def move_all_mobs_and_their_spear(mobs: list, players: list):
             if spear.range <= 0:
                 Mo.spears.remove(spear)
             spear.move(0, 0)
-            pygame.draw.rect(screen, (255, 0, 0), spear.hit_box)
+            screen.blit(spear.image, spear.hit_box)
 
 
 def main():
@@ -259,13 +259,15 @@ def main():
                     chat_enabled = not chat_enabled
                 elif event.key == pygame.K_e:
                     P.use_ability()
-                elif event.key == pygame.K_x and P.picked:
-                    P.gold += P.inventory[P.picked].upgrade_cost * 0.7
+                elif event.key == pygame.K_x and P.picked and P.inventory[P.picked]:
+                    P.gold += P.inventory[P.picked].upgrade_cost * 0.75
                     P.inventory[P.picked] = False
                     P.picked = 0
                 elif event.key == pygame.K_q:
                     for I in items_on_surface:
                         if I.check_pick_up(P):
+                            if P.inventory[P.picked]:
+                                P.gold += P.inventory[P.picked].upgrade_cost * 0.6
                             P.inventory[P.picked] = item.Item(I.name, I.lvl)
                             items_on_surface.remove(I)
                             break
