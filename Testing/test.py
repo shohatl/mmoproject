@@ -234,6 +234,7 @@ def main():
         m_x, m_y = pygame.mouse.get_pos()
         frame_counter += 1
         frame_counter %= 60
+        keys = pygame.key.get_pressed()
         for event in pygame.event.get():
             if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 pygame.quit()
@@ -259,6 +260,7 @@ def main():
                 elif event.key == pygame.K_e:
                     P.use_ability()
                 elif event.key == pygame.K_x and P.picked:
+                    P.gold += P.inventory[P.picked].upgrade_cost * 0.7
                     P.inventory[P.picked] = False
                     P.picked = 0
                 elif event.key == pygame.K_q:
@@ -279,7 +281,6 @@ def main():
         move_all_players_and_their_particles(players)  # server
         move_all_mobs_and_their_spear(mobs, players)  # server
         identify_par_dmg(players, mobs)  # server
-        keys = pygame.key.get_pressed()
         if chat_enabled:
             height_of_msg = 10
             for msg in chat_log:
