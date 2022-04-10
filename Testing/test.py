@@ -1,14 +1,14 @@
-import random
 import sys
 import time
 
 import pygame
 
-from Classes import player, mob, item, button
+from Classes import player, mob, item, dropped_item
 
 pygame.init()
 screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 P_rect = pygame.Rect((0, 0), (100, 100))
+items_on_surface = []
 font = pygame.font.Font("freesansbold.ttf", 20)
 font_gold = pygame.font.Font("freesansbold.ttf", 100)
 
@@ -23,10 +23,6 @@ bronze_coin = pygame.transform.scale(bronze_coin, (70, 70))
 chat_box = pygame.image.load('../Assets/basics/chatBox.png')
 
 chat_box = pygame.transform.scale(chat_box, (540, 30))
-
-shop_menu = pygame.image.load('../Assets/shop/shop.png')
-
-shop_menu = pygame.transform.scale(shop_menu, (560, 370))
 
 icon_bow = pygame.image.load('../Assets/icons/icon-bow.png')
 icon_dagger = pygame.image.load('../Assets/icons/icon-dagger.png')
@@ -72,6 +68,7 @@ def identify_par_dmg(Ps: list, Ms: list):
                             P1.gold += M.worth
                             M.death_time = time.time()
                             M.is_alive = False
+                            items_on_surface.append(generate_drop(M.x, M.y, M.lvl))
             for P2 in Ps:
                 if P2.nickname != P1.nickname:
                     P2_rect = pygame.Rect((0, 0), (100, 100))
@@ -98,16 +95,12 @@ def show_player_health(P: player.Player):
 def show_inventory(P: player.Player):
     slot_rect = pygame.Rect((screen.get_size()[0] - 490, screen.get_size()[1] - 90), (90, 90))
     in_hand_x, in_hand_y = 0, 0
-    average = 0
-    amount_of_items = 0
     for i, I in enumerate(P.inventory):
         pygame.draw.rect(screen, (100, 100, 100), slot_rect, 10)
         if i == P.picked:
             in_hand_x = slot_rect.x
             in_hand_y = slot_rect.y
         if I:
-            average += I.lvl
-            amount_of_items += 1
             slot_rect.x += 10
             slot_rect.y += 10
             if I.name == 'bow':
@@ -121,7 +114,6 @@ def show_inventory(P: player.Player):
             slot_rect.y -= 10
         slot_rect.x += 80
     pygame.draw.rect(screen, (255, 255, 255), ((in_hand_x, in_hand_y), (90, 90)), 10)
-    return average // amount_of_items
 
 
 def show_time(start_time):
@@ -168,14 +160,15 @@ def show_name(P: player.Player):
     screen.blit(name, name_rect)
 
 
-def generate_offer(average: int):
+def generate_drop(x, y, average):
+
     lvl = abs(random.randint(average - 10, average + 10))
     name = random.randint(0, 2)
     if name == 0:
-        return item.Item("bow", lvl)
+        return dropped_item.Dropped_item(x, y, lvl, 'bow', time.time())
     elif name == 1:
-        return item.Item("dagger", lvl)
-    return item.Item("snowball", lvl)
+        return dropped_item.Dropped_item(x, y, lvl, 'dagger', time.time())
+    return dropped_item.Dropped_item(x, y, lvl, "cumball", time.time())
 
 
 def move(P2: player.Player, P: player.Player):
@@ -223,17 +216,13 @@ def move_all_mobs_and_their_spear(mobs: list, players: list):
 def main():
     start_time = time.time()
     chat_log = []
-    buttons = []
     frame_counter = 0
     in_chat = False
-    in_shop = False
     chat_enabled = True
-    average = 0
     chat_message = ''
     CL = pygame.time.Clock()
     P = player.Player("Hunnydrips", 0, 0)
     P2 = player.Player("Glidaria", 0, 0)
-
     M = mob.Mob(50, 50, 5)
     M2 = mob.Mob(500, 50, 3)
     players = [P, P2]
@@ -264,36 +253,6 @@ def main():
                 elif in_chat:
                     if len(chat_message) < 45 and '~' >= event.unicode >= ' ':
                         chat_message += event.unicode
-                elif event.key == pygame.K_b:
-                    in_shop = not in_shop
-                    P.dir_y = 0
-                    P.dir_x = 0
-                    chat_enabled = not in_shop
-                    if in_shop:
-                        item_for_offer = generate_offer(average)
-                        if not buttons:
-                            if item_for_offer.name == "bow":
-                                buttons.append(
-                                    button.Button(screen.get_width() // 2, screen.get_height() // 2 - 90, icon_bow))
-                            elif item_for_offer.name == "dagger":
-                                buttons.append(
-                                    button.Button(screen.get_width() // 2, screen.get_height() // 2 - 90, icon_dagger))
-                            else:
-                                buttons.append(button.Button(screen.get_width() // 2, screen.get_height() // 2 - 90,
-                                                             icon_snowball))
-                            for i, I in enumerate(P.inventory):
-                                if I:
-                                    if I.name == "bow":
-                                        buttons.append(button.Button(screen.get_width() // 2 + 90 * (i - 2.5),
-                                                                     screen.get_height() // 2 + 70, icon_bow))
-                                    elif I.name == "dagger":
-                                        buttons.append(button.Button(screen.get_width() // 2 + 90 * (i - 2.5),
-                                                                     screen.get_height() // 2 + 70, icon_dagger))
-                                    else:
-                                        buttons.append(button.Button(screen.get_width() // 2 + 90 * (i - 2.5),
-                                                                     screen.get_height() // 2 + 70, icon_snowball))
-                    else:
-                        buttons = []
                 elif event.key == pygame.K_TAB:
                     chat_enabled = not chat_enabled
                 elif event.key == pygame.K_e:
@@ -305,15 +264,7 @@ def main():
                     P.attack(m_x, m_y)
                 elif event.button == 3:
                     P2.attack(m_x, m_y)
-        if in_shop:
-            shop_rect = shop_menu.get_rect()
-            shop_rect.center = screen.get_width() // 2, screen.get_height() // 2
-            screen.blit(shop_menu, shop_rect)
-            for B in buttons:
-                B.show_button(screen)
-                if B.check_press():
-                    print('pressed')
-        if not in_chat and not in_shop:
+        if not in_chat:
             move(P2, P)  # client
         move_all_players_and_their_particles(players)  # server
         move_all_mobs_and_their_spear(mobs, players)  # server
@@ -335,8 +286,11 @@ def main():
             if frame_counter < 30:
                 blinking_shit = '|'
             screen.blit(font.render(chat_message + blinking_shit, True, (255, 255, 255)), (13, 205))
-
-        average = show_inventory(P)  # client
+        for I in items_on_surface:
+            if time.time() - I.time_dropped > 7:
+                items_on_surface.remove(I)
+            I.show_item_on_surface(screen)
+        show_inventory(P)  # client
         show_time(start_time)  # client
         show_gold(P.gold)  # client
         CL.tick(60)
