@@ -24,7 +24,7 @@ class Player:
         self.projectiles = []
         self.has_moved = False
         self.picked = 0
-        self.inventory = [item.Item("bow", 1), item.Item('snowball', 90), item.Item('snowball', 69), False, False, item.Item('dagger', 3)]  # to add items later
+        self.inventory = [item.Item("bow", 1), item.Item('cumball', 90), item.Item('cumball', 69), False, False, item.Item('dagger', 3)]  # to add items later
         self.gold = 0
         self.health = 100
         self.nickname = nickname
@@ -48,7 +48,7 @@ class Player:
     def attack(self, mouseX, mouseY):
         if time.time() - self.last_time_attack > self.inventory[self.picked].cool_down:
             self.last_time_attack = time.time()
-            self.projectiles.append(particle.Particle(self.x, self.y, mouseX, mouseY, self.inventory[self.picked].speed, self.inventory[self.picked].range, self.inventory[self.picked].dmg, self.inventory[self.picked].base_hit_box))
+            self.projectiles.append(particle.Particle(self.x, self.y, mouseX, mouseY, self.inventory[self.picked].speed, self.inventory[self.picked].range, self.inventory[self.picked].dmg, self.inventory[self.picked].name))
 
     def use_ability(self):
         if time.time() - self.last_time_used_ability > 10:
