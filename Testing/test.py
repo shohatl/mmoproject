@@ -1,7 +1,6 @@
 import sys
 import time
 import random
-
 import pygame
 
 from Classes import player, mob, item, dropped_item
@@ -185,7 +184,7 @@ def move_all_players_and_their_particles(players: list):
         Pl.move()
         Pl.ability()
         P_rect.center = Pl.x, Pl.y
-        pygame.draw.rect(screen, (0, 255, 0), P_rect)
+        screen.blit(pygame.transform.flip(P_sprite, Pl.dir_x == -1, False), P_rect)
         show_player_health(Pl)
         show_name(Pl)
         for par in Pl.projectiles:
@@ -223,6 +222,8 @@ def main():
     chat_message = ''
     CL = pygame.time.Clock()
     P = player.Player("Hunnydrips", 0, 0)
+    global P_sprite
+    P_sprite = pygame.image.load(f'../Assets/basics/{P.Class}.png')
     P2 = player.Player("Glidaria", 0, 0)
     M = mob.Mob(50, 50, 5)
     M2 = mob.Mob(500, 50, 3)
