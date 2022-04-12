@@ -7,7 +7,8 @@ from Classes import player, mob, item, dropped_item
 
 pygame.init()
 screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
-P_rect = pygame.Rect((0, 0), (100, 100))
+P_rect = pygame.Rect((0, 0), (66, 92))
+M_rect = pygame.Rect((0, 0), (88, 120))
 items_on_surface = []
 font = pygame.font.Font("freesansbold.ttf", 20)
 font_gold = pygame.font.Font("freesansbold.ttf", 100)
@@ -31,6 +32,9 @@ icon_snowball = pygame.image.load('../Assets/icons/icon-cumball.png')
 icon_bow = pygame.transform.scale(icon_bow, (70, 70))
 icon_dagger = pygame.transform.scale(icon_dagger, (70, 70))
 icon_snowball = pygame.transform.scale(icon_snowball, (70, 70))
+
+mob_image = pygame.image.load('../Assets/basics/mob.png')
+zombie_image = pygame.image.load('../Assets/basics/zombie.png')
 
 
 def time_to_string(t):
@@ -57,7 +61,6 @@ def identify_par_dmg(Ps: list, Ms: list):
         for par in P1.projectiles:
             for M in Ms:
                 if M.is_alive:
-                    M_rect = pygame.Rect((0, 0), (100, 100))
                     M_rect.center = M.x, M.y
                     if M_rect.colliderect(par.hit_box) and not par.hit:
                         par.hit = True
@@ -71,7 +74,7 @@ def identify_par_dmg(Ps: list, Ms: list):
                             items_on_surface.append(generate_drop(M.x, M.y, M.lvl))
             for P2 in Ps:
                 if P2.nickname != P1.nickname:
-                    P2_rect = pygame.Rect((0, 0), (100, 100))
+                    P2_rect = pygame.Rect((0, 0), (66, 92))
                     P2_rect.center = P2.x, P2.y
                     if P2_rect.colliderect(par.hit_box) and not par.hit:
                         par.hit = True
@@ -83,8 +86,8 @@ def identify_par_dmg(Ps: list, Ms: list):
 
 
 def show_mob_health(M: mob.Mob):
-    pygame.draw.rect(screen, (0, 255, 0), ((M.x - 50, M.y - 70), (M.health // M.lvl, 10)))
-    pygame.draw.rect(screen, (255, 0, 0), ((M.x - 50 + M.health // M.lvl, M.y - 70), (100 - M.health // M.lvl, 10)))
+    pygame.draw.rect(screen, (0, 255, 0), ((M.x - 50, M.y - 75), (M.health // M.lvl, 10)))
+    pygame.draw.rect(screen, (255, 0, 0), ((M.x - 50 + M.health // M.lvl, M.y - 75), (100 - M.health // M.lvl, 10)))
 
 
 def show_player_health(P: player.Player):
@@ -161,8 +164,7 @@ def show_name(P: player.Player):
 
 
 def generate_drop(x, y, average):
-
-    lvl = abs(random.randint(average - 10, average + 10))
+    lvl = abs(random.randint(average - 11, average + 9)) + 1
     name = random.randint(0, 2)
     if name == 0:
         return dropped_item.Dropped_item(x, y, lvl, 'bow', time.time())
@@ -184,7 +186,7 @@ def move_all_players_and_their_particles(players: list):
         Pl.move()
         Pl.ability()
         P_rect.center = Pl.x, Pl.y
-        screen.blit(pygame.transform.flip(P_sprite, Pl.dir_x == -1, False), P_rect)
+        screen.blit(pygame.transform.flip(P_sprite, Pl.last_dir == -1, False), P_rect)
         show_player_health(Pl)
         show_name(Pl)
         for par in Pl.projectiles:
@@ -198,8 +200,11 @@ def move_all_mobs_and_their_spear(mobs: list, players: list):
     for Mo in mobs:
         if Mo.is_alive:
             Mo.move(players)
-            P_rect.center = Mo.x, Mo.y
-            pygame.draw.rect(screen, (0, 255, 0), P_rect)
+            M_rect.center = Mo.x, Mo.y
+            if Mo.is_melee:
+                screen.blit(pygame.transform.flip(zombie_image, Mo.last_dir, False), M_rect)
+            else:
+                screen.blit(pygame.transform.flip(mob_image, not Mo.last_dir, False), M_rect)
             show_mob_lvl(Mo)
             show_mob_health(Mo)
         elif time.time() - Mo.death_time >= 7:
@@ -222,9 +227,9 @@ def main():
     chat_message = ''
     CL = pygame.time.Clock()
     P = player.Player("Hunnydrips", 0, 0)
+    P2 = player.Player("Glidaria", 0, 0)
     global P_sprite
     P_sprite = pygame.image.load(f'../Assets/basics/{P.Class}.png')
-    P2 = player.Player("Glidaria", 0, 0)
     M = mob.Mob(50, 50, 5)
     M2 = mob.Mob(500, 50, 3)
     players = [P, P2]
@@ -272,7 +277,8 @@ def main():
                             P.inventory[P.picked] = item.Item(I.name, I.lvl)
                             items_on_surface.remove(I)
                             break
-                elif event.key == pygame.K_u and P.inventory[P.picked].lvl < 999 and P.inventory[P.picked].upgrade_cost <= P.gold:
+                elif event.key == pygame.K_u and P.inventory[P.picked].lvl < 999 and P.inventory[P.picked].upgrade_cost \
+                        <= P.gold:
                     P.gold -= P.inventory[P.picked].upgrade_cost
                     P.inventory[P.picked].upgrade()
                 elif pygame.K_1 <= event.key <= pygame.K_6:
