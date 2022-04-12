@@ -326,7 +326,7 @@ def main():
                 screen.blit(font.render(msg, True, (255, 255, 255)), (20, height_of_msg))
                 height_of_msg += 30
         # ------------------------------------
-
+#
         # ------------------------------------- show the typed message
         if in_chat:
             if keys[pygame.K_BACKSPACE] and keys[pygame.K_LCTRL]:
