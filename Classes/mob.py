@@ -10,6 +10,7 @@ class Mob:
         self.y = y
         self.dir_x = 0
         self.dir_y = 0
+        self.last_dir = 1
         self.lvl = lvl
         self.is_melee = bool(random.randint(0, 1))
         self.speed = 5 + 7 * int(self.is_melee)
@@ -38,7 +39,7 @@ class Mob:
         # criteria for movement
         home_rect = pygame.Rect((0, 0), (self.home_range, self.home_range))
         home_rect.center = self.home_x, self.home_y
-        mob_rect = pygame.Rect((0, 0), (80, 120))
+        mob_rect = pygame.Rect((0, 0), (88, 120))
         mob_rect.center = self.x, self.y
         if mob_rect.colliderect(home_rect):
             trigger_rect = pygame.Rect((0, 0), (self.trigger_range, self.trigger_range))
@@ -64,6 +65,7 @@ class Mob:
         # Actual procedure of movement
         if bool(random.randint(0, 1)) and self.x != self.target_x:
             self.x += self.speed * (self.target_x - self.x) / abs(self.target_x - self.x)
+            self.last_dir = self.target_x > self.x
         elif self.y != self.target_y:
             self.y += self.speed * (self.target_y - self.y) / abs(self.target_y - self.y)
         if self.has_target and time.time() - self.last_attacked > 2:
@@ -71,10 +73,10 @@ class Mob:
                 self.last_attacked = time.time()
                 self.spears.append(particle.Particle(self.x, self.y, self.target_x, self.target_y, 20, 800, self.lvl * 5, 'spear'))
             else:
-                M_rect = pygame.Rect((0, 0), (100, 100))
+                M_rect = pygame.Rect((0, 0), (88, 120))
                 M_rect.center = self.x, self.y
                 for P in players:
-                    P_rect = pygame.Rect((0, 0), (100, 100))
+                    P_rect = pygame.Rect((0, 0), (66, 92))
                     P_rect.center = P.x, P.y
                     if P_rect.colliderect(M_rect):
                         self.last_attacked = time.time()
