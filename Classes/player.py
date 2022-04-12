@@ -11,6 +11,7 @@ class Player:
         self.y = 100
         self.dir_x = 0
         self.dir_y = 0
+        self.last_dir = 1
         self.Class = "Mage"
         self.last_time_used_ability = 0
         self.is_ability_active = False
@@ -37,6 +38,8 @@ class Player:
     def move(self):
         self.has_moved = False
         if time.time() - self.last_time_moved > 10 ** -3:
+            if self.dir_x:
+                self.last_dir = self.dir_x
             self.has_moved = True
             self.x += self.speed * self.dir_x
             # if self.check_collision():
