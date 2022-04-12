@@ -75,3 +75,9 @@ class Player:
             self.is_ability_active = False
             self.speed = 8
             self.income_dmg_multiplier = 1
+
+    def use_potion(self):
+        if self.gold > 1000:
+            self.health += 10
+            self.gold -= 1000
+            self.health -= self.health // 100 * self.health % 100
