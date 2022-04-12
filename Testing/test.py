@@ -281,6 +281,8 @@ def main():
                         <= P.gold:
                     P.gold -= P.inventory[P.picked].upgrade_cost
                     P.inventory[P.picked].upgrade()
+                elif event.key == pygame.K_p:
+                    P.use_potion()
                 elif pygame.K_1 <= event.key <= pygame.K_6:
                     P.picked = int(event.unicode) - 1
             elif event.type == pygame.MOUSEBUTTONDOWN and not in_chat and event.button == 1 and P.inventory[P.picked]:
