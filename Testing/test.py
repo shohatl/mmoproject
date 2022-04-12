@@ -1,10 +1,15 @@
 import sys
 import time
+import random
 import pygame
-from Classes import player, mob
+
+from Classes import player, mob, item, dropped_item
 
 pygame.init()
 screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+P_rect = pygame.Rect((0, 0), (66, 92))
+M_rect = pygame.Rect((0, 0), (88, 120))
+items_on_surface = []
 font = pygame.font.Font("freesansbold.ttf", 20)
 font_gold = pygame.font.Font("freesansbold.ttf", 100)
 
@@ -28,8 +33,91 @@ icon_bow = pygame.transform.scale(icon_bow, (70, 70))
 icon_dagger = pygame.transform.scale(icon_dagger, (70, 70))
 icon_snowball = pygame.transform.scale(icon_snowball, (70, 70))
 
+mob_image = pygame.image.load('../Assets/basics/mob.png')
+zombie_image = pygame.image.load('../Assets/basics/zombie.png')
 
-def show_inverntory(P: player.Player):
+
+def time_to_string(t):
+    return f'{int(t // 3600)}:{int(t // 60)}:{int(t // 1)}'
+
+
+def identify_par_dmg(Ps: list, Ms: list):
+    """
+    :param Ps: A list of all the players that exist in the game
+    :param Ms: A list of the mobs
+    :return: new health for each entity
+    """
+    for M in Ms:
+        for S in M.spears:
+            for P in Ps:
+                P_rect.center = P.x, P.y
+                if P_rect.colliderect(S.hit_box) and not S.hit:
+                    M.spears.remove(S)
+                    S.hit = True
+                    P.health -= int(10 * P.income_dmg_multiplier)
+                    if P.health <= 0:
+                        Ps.remove(P)
+    for P1 in Ps:
+        for par in P1.projectiles:
+            for M in Ms:
+                if M.is_alive:
+                    M_rect.center = M.x, M.y
+                    if M_rect.colliderect(par.hit_box) and not par.hit:
+                        par.hit = True
+                        if par.speed != 1:
+                            P1.projectiles.remove(par)
+                        M.health -= par.dmg
+                        if M.health <= 0:
+                            P1.gold += M.worth
+                            M.death_time = time.time()
+                            M.is_alive = False
+                            items_on_surface.append(generate_drop(M.x, M.y, M.lvl))
+            for P2 in Ps:
+                if P2.nickname != P1.nickname:
+                    P2_rect = pygame.Rect((0, 0), (66, 92))
+                    P2_rect.center = P2.x, P2.y
+                    if P2_rect.colliderect(par.hit_box) and not par.hit:
+                        par.hit = True
+                        if par.speed != 1:
+                            P1.projectiles.remove(par)
+                        P2.health -= int(par.dmg * P2.income_dmg_multiplier)
+                        if P2.health <= 0:
+                            Ps.remove(P2)
+
+
+def show_player_and_his_particles(P: player.Player):
+    P_rect.center = P.x, P.y
+    screen.blit(pygame.transform.flip(P_sprite, P.last_dir == -1, False), P_rect)
+    show_player_health(P)
+    show_name(P)
+    for par in P.projectiles:
+        screen.blit(par.image, par.hit_box)
+
+
+def show_mob_and_his_spears(M: mob.Mob):
+    if M.is_alive:
+        M_rect.center = M.x, M.y
+        if M.is_melee:
+            screen.blit(pygame.transform.flip(zombie_image, M.last_dir, False), M_rect)
+        else:
+            screen.blit(pygame.transform.flip(mob_image, not M.last_dir, False), M_rect)
+        show_mob_lvl(M)
+        show_mob_health(M)
+    for spear in M.spears:
+        screen.blit(spear.image, spear.hit_box)
+
+
+def show_mob_health(M: mob.Mob):
+    pygame.draw.rect(screen, (0, 255, 0), ((M.x - 50, M.y - 75), (M.health // M.lvl, 10)))
+    pygame.draw.rect(screen, (255, 0, 0), ((M.x - 50 + M.health // M.lvl, M.y - 75), (100 - M.health // M.lvl, 10)))
+
+
+def show_player_health(P: player.Player):
+    pygame.draw.rect(screen, (0, 255, 0), ((P.x - 50, P.y - 70), (P.health, 10)))
+    pygame.draw.rect(screen, (255, 0, 0), ((P.x - 50 + P.health, P.y - 70), (100 - P.health, 10)))
+
+
+def show_inventory(P: player.Player):
     slot_rect = pygame.Rect((screen.get_size()[0] - 490, screen.get_size()[1] - 90), (90, 90))
     in_hand_x, in_hand_y = 0, 0
     for i, I in enumerate(P.inventory):
@@ -53,20 +141,16 @@ def show_inverntory(P: player.Player):
     pygame.draw.rect(screen, (255, 255, 255), ((in_hand_x, in_hand_y), (90, 90)), 10)
 
 
-def time_to_string(time):
-    return f'{int(time // 3600)}:{int(time // 60)}:{int(time // 1)}'
-
-
 def show_time(start_time):
     text_rect = font.render(time_to_string(time.time() - start_time), True, (255, 255, 255)).get_rect()
     text_rect.topright = screen.get_size()[0], 0
     screen.blit(font.render(time_to_string(time.time() - start_time), True, (255, 255, 255)), text_rect)
 
 
-def draw_gold(gold: int):
-    screen.blit(gold_coin, (35, 950))
-    screen.blit(silver_coin, (0, 1010))
-    screen.blit(bronze_coin, (70, 1010))
+def show_gold(gold: int):
+    screen.blit(gold_coin, (35, screen.get_height() - 130))
+    screen.blit(silver_coin, (0, screen.get_height() - 70))
+    screen.blit(bronze_coin, (70, screen.get_height() - 70))
     to_add = ''
     if gold >= 1000000000:
         gold = int(gold / 100000000)
@@ -81,62 +165,7 @@ def draw_gold(gold: int):
         gold /= 10
         to_add = 'K'
     toShow = font_gold.render(str(gold) + to_add, True, (255, 215, 0))
-    screen.blit(toShow, (150, 970))
-
-
-def identify_par_dmg(Ps: list, Ms: list):
-    """
-    :param Ps: A list of all the players that exist in the game
-    :param Ms: A list of the mobs
-    :return: new health for each entity
-    """
-    for M in Ms:
-        for S in M.spears:
-            for P in Ps:
-                P_rect = pygame.Rect((0, 0), (100, 100))
-                P_rect.center = P.x, P.y
-                if P_rect.colliderect(S.hit_box) and not S.hit:
-                    M.spears.remove(S)
-                    S.hit = True
-                    P.health -= int(10 * P.income_dmg_multiplier)
-                    if P.health <= 0:
-                        Ps.remove(P)
-    for P1 in Ps:
-        for par in P1.projectiles:
-            for M in Ms:
-                if M.is_alive:
-                    M_rect = pygame.Rect((0, 0), (100, 100))
-                    M_rect.center = M.x, M.y
-                    if M_rect.colliderect(par.hit_box) and not par.hit:
-                        par.hit = True
-                        if par.speed != 1:
-                            P1.projectiles.remove(par)
-                        M.health -= par.dmg
-                        if M.health <= 0:
-                            P1.gold += M.worth
-                            M.death_time = time.time()
-                            M.is_alive = False
-            for P2 in Ps:
-                if P2.nickname != P1.nickname:
-                    P2_rect = pygame.Rect((0, 0), (100, 100))
-                    P2_rect.center = P2.x, P2.y
-                    if P2_rect.colliderect(par.hit_box) and not par.hit:
-                        par.hit = True
-                        if par.speed != 1:
-                            P1.projectiles.remove(par)
-                        P2.health -= int(par.dmg * P2.income_dmg_multiplier)
-                        if P2.health <= 0:
-                            Ps.remove(P2)
-
-
-def show_mob_health(M: mob.Mob):
-    pygame.draw.rect(screen, (0, 255, 0), ((M.x - 50, M.y - 70), (M.health // M.lvl, 10)))
-    pygame.draw.rect(screen, (255, 0, 0), ((M.x - 50 + M.health // M.lvl, M.y - 70), (100 - M.health // M.lvl, 10)))
-
-
-def show_player_health(P: player.Player):
-    pygame.draw.rect(screen, (0, 255, 0), ((P.x - 50, P.y - 70), (P.health, 10)))
-    pygame.draw.rect(screen, (255, 0, 0), ((P.x - 50 + P.health, P.y - 70), (100 - P.health, 10)))
+    screen.blit(toShow, (150, screen.get_height() - 110))
 
 
 def show_mob_lvl(M: mob.Mob):
@@ -156,6 +185,16 @@ def show_name(P: player.Player):
     screen.blit(name, name_rect)
 
 
+def generate_drop(x, y, average):
+    lvl = abs(random.randint(average - 11, average + 9)) + 1
+    name = random.randint(0, 2)
+    if name == 0:
+        return dropped_item.Dropped_item(x, y, lvl, 'bow', time.time())
+    elif name == 1:
+        return dropped_item.Dropped_item(x, y, lvl, 'dagger', time.time())
+    return dropped_item.Dropped_item(x, y, lvl, "cumball", time.time())
+
+
 def move(P2: player.Player, P: player.Player):
     keys = pygame.key.get_pressed()
     P.dir_x = keys[pygame.K_d] - keys[pygame.K_a]
@@ -168,25 +207,16 @@ def move_all_players_and_their_particles(players: list):
     for Pl in players:
         Pl.move()
         Pl.ability()
-        P_rect.center = Pl.x, Pl.y
-        pygame.draw.rect(screen, (0, 255, 0), P_rect)
-        show_player_health(Pl)
-        show_name(Pl)
         for par in Pl.projectiles:
             if par.range <= 0:
                 Pl.projectiles.remove(par)
-            par.move()
-            pygame.draw.rect(screen, (255, 0, 0), par.hit_box)
+            par.move(Pl.x, Pl.y)
 
 
 def move_all_mobs_and_their_spear(mobs: list, players: list):
     for Mo in mobs:
         if Mo.is_alive:
             Mo.move(players)
-            P_rect.center = Mo.x, Mo.y
-            pygame.draw.rect(screen, (0, 255, 0), P_rect)
-            show_mob_lvl(Mo)
-            show_mob_health(Mo)
         elif time.time() - Mo.death_time >= 7:
             Mo.is_alive = True
             Mo.x, Mo.y = Mo.home_x, Mo.home_y
@@ -194,11 +224,7 @@ def move_all_mobs_and_their_spear(mobs: list, players: list):
         for spear in Mo.spears:
             if spear.range <= 0:
                 Mo.spears.remove(spear)
-            spear.move()
-            pygame.draw.rect(screen, (255, 0, 0), spear.hit_box)
-
-
-P_rect = pygame.Rect((0, 0), (100, 100))
+            spear.move(0, 0)
 
 
 def main():
@@ -206,13 +232,13 @@ def main():
     chat_log = []
     frame_counter = 0
     in_chat = False
-    in_shop = False
     chat_enabled = True
     chat_message = ''
     CL = pygame.time.Clock()
     P = player.Player("Hunnydrips", 0, 0)
     P2 = player.Player("Glidaria", 0, 0)
-
+    global P_sprite
+    P_sprite = pygame.image.load(f'../Assets/basics/{P.Class}.png')
     M = mob.Mob(50, 50, 5)
     M2 = mob.Mob(500, 50, 3)
     players = [P, P2]
@@ -223,6 +249,7 @@ def main():
         m_x, m_y = pygame.mouse.get_pos()
         frame_counter += 1
         frame_counter %= 60
+        keys = pygame.key.get_pressed()
         for event in pygame.event.get():
             if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 pygame.quit()
@@ -243,35 +270,64 @@ def main():
                 elif in_chat:
                     if len(chat_message) < 45 and '~' >= event.unicode >= ' ':
                         chat_message += event.unicode
-                elif event.key == pygame.K_b:
-                    in_shop = not in_shop
-                    P.dir_y = 0
-                    P.dir_x = 0
-                    chat_enabled = not in_shop
                 elif event.key == pygame.K_TAB:
                     chat_enabled = not chat_enabled
                 elif event.key == pygame.K_e:
                     P.use_ability()
-                elif pygame.K_1 <= event.key <= pygame.K_6 and P.inventory[int(event.unicode) - 1]:
+                elif event.key == pygame.K_x and P.picked and P.inventory[P.picked]:
+                    P.gold += P.inventory[P.picked].upgrade_cost * 0.75
+                    P.inventory[P.picked] = False
+                    P.picked = 0
+                elif event.key == pygame.K_q:
+                    for I in items_on_surface:
+                        if I.check_pick_up(P):
+                            if P.inventory[P.picked]:
+                                P.gold += P.inventory[P.picked].upgrade_cost * 0.6
+                            P.inventory[P.picked] = item.Item(I.name, I.lvl)
+                            items_on_surface.remove(I)
+                            break
+                elif event.key == pygame.K_u and P.inventory[P.picked].lvl < 999 and P.inventory[P.picked].upgrade_cost \
+                        <= P.gold:
+                    P.gold -= P.inventory[P.picked].upgrade_cost
+                    P.inventory[P.picked].upgrade()
+                elif event.key == pygame.K_p:
+                    P.use_potion()
+                elif pygame.K_1 <= event.key <= pygame.K_6:
                     P.picked = int(event.unicode) - 1
             elif event.type == pygame.MOUSEBUTTONDOWN and not in_chat:
-                if event.button == 1:
+                if event.button == 1 and P.inventory[P.picked]:
                     P.attack(m_x, m_y)
-                elif event.button == 3:
-                    P2.attack(m_x, m_y)
+                elif event.button == 4:
+                    P.picked += 1
+                    P.picked %= 6
+                elif event.button == 5:
+                    P.picked -= 1
+                    P.picked %= 6
 
-        if not in_chat and not in_shop:
+        if not in_chat:
             move(P2, P)  # client
+        # ------------------ update all locations data
         move_all_players_and_their_particles(players)  # server
         move_all_mobs_and_their_spear(mobs, players)  # server
         identify_par_dmg(players, mobs)  # server
-        keys = pygame.key.get_pressed()
+        # --------------------------------
+
+        # show all the entities
+        for M in mobs:
+            show_mob_and_his_spears(M)
+        for Pl in players:
+            show_player_and_his_particles(Pl)
+        # -----------------
+
+        # ------------------------------ display chat messages
         if chat_enabled:
             height_of_msg = 10
             for msg in chat_log:
                 screen.blit(font.render(msg, True, (255, 255, 255)), (20, height_of_msg))
                 height_of_msg += 30
+        # ------------------------------------
 
+        # ------------------------------------- show the typed message
         if in_chat:
             if keys[pygame.K_BACKSPACE] and keys[pygame.K_LCTRL]:
                 chat_message = ''
@@ -282,10 +338,17 @@ def main():
             if frame_counter < 30:
                 blinking_shit = '|'
             screen.blit(font.render(chat_message + blinking_shit, True, (255, 255, 255)), (13, 205))
+        # ------------------------------------
 
-        show_inverntory(P)
-        show_time(start_time)
-        draw_gold(P.gold)  # client
+        # --------------- remove on floor items
+        for I in items_on_surface:
+            if time.time() - I.time_dropped > 7:
+                items_on_surface.remove(I)
+            I.show_item_on_surface(screen)
+        # -------------------------------------
+        show_inventory(P)  # client
+        show_time(start_time)  # client
+        show_gold(P.gold)  # client
         CL.tick(60)
         pygame.display.update()
 
