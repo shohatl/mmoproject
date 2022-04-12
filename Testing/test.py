@@ -277,7 +277,8 @@ def main():
                             P.inventory[P.picked] = item.Item(I.name, I.lvl)
                             items_on_surface.remove(I)
                             break
-                elif event.key == pygame.K_u and P.inventory[P.picked].lvl < 999 and P.inventory[P.picked].upgrade_cost <= P.gold:
+                elif event.key == pygame.K_u and P.inventory[P.picked].lvl < 999 and P.inventory[P.picked].upgrade_cost \
+                        <= P.gold:
                     P.gold -= P.inventory[P.picked].upgrade_cost
                     P.inventory[P.picked].upgrade()
                 elif pygame.K_1 <= event.key <= pygame.K_6:
