@@ -6,12 +6,13 @@ collide_list = [4, 5, 22, 23, 26, 39, 40, 41, 43, 57, 59, 60, 75, 76, 77, 78, 92
 
 
 class Player:
-    def __init__(self, nickname, ip, key):
+    def __init__(self, nickname, ip, key, Class):
         self.x = 100
         self.y = 100
         self.dir_x = 0
         self.dir_y = 0
-        self.Class = "Mage"
+        self.last_dir = 1
+        self.Class = Class
         self.last_time_used_ability = 0
         self.is_ability_active = False
         self.last_time_moved = 0
@@ -22,10 +23,11 @@ class Player:
         self.mobs_on_screen = []
         self.particles_on_screen = []
         self.projectiles = []
+        self.has_moved = False
         self.picked = 0
-        self.inventory = [item.Item("bow", 1), False, False, False, False, False]  # to add items later
+        self.inventory = [item.Item("bow", 1), item.Item('cumball', 90), item.Item('cumball', 69), False, False, item.Item('dagger', 3)]  # to add items later
         self.gold = 0
-        self.health = 100 / 2
+        self.health = 100
         self.nickname = nickname
         self.ip = ip
         self.key = key
@@ -34,7 +36,11 @@ class Player:
         return int(map[self.y // 64][self.x // 64]) in collide_list
 
     def move(self):
+        self.has_moved = False
         if time.time() - self.last_time_moved > 10 ** -3:
+            if self.dir_x:
+                self.last_dir = self.dir_x
+            self.has_moved = True
             self.x += self.speed * self.dir_x
             # if self.check_collision():
             #     self.x -= self.dir_x
@@ -45,7 +51,7 @@ class Player:
     def attack(self, mouseX, mouseY):
         if time.time() - self.last_time_attack > self.inventory[self.picked].cool_down:
             self.last_time_attack = time.time()
-            self.projectiles.append(particle.Particle(self.x, self.y, mouseX, mouseY, self.inventory[self.picked].speed, self.inventory[self.picked].range, self.inventory[self.picked].dmg, self.inventory[self.picked].base_hit_box))
+            self.projectiles.append(particle.Particle(self.x, self.y, mouseX, mouseY, self.inventory[self.picked].speed, self.inventory[self.picked].range, self.inventory[self.picked].dmg, self.inventory[self.picked].name))
 
     def use_ability(self):
         if time.time() - self.last_time_used_ability > 10:
@@ -54,10 +60,12 @@ class Player:
 
     def ability(self):
         if self.is_ability_active:
-            if time.time() - self.last_time_used_ability > 2:
+            if time.time() - self.last_time_used_ability > 3:
+                self.is_ability_active = False
+                self.income_dmg_multiplier = 1
+            if time.time() - self.last_time_used_ability > 2 and self.Class == 'Scout':
                 self.is_ability_active = False
                 self.speed = 8
-                self.income_dmg_multiplier = 1
             if self.Class == "Mage":
                 self.health = 100
                 self.is_ability_active = False
@@ -69,3 +77,9 @@ class Player:
             self.is_ability_active = False
             self.speed = 8
             self.income_dmg_multiplier = 1
+
+    def use_potion(self):
+        if self.gold >= 1000:
+            self.health += 10
+            self.gold -= 1000
+            self.health -= self.health // 100 * self.health % 100
