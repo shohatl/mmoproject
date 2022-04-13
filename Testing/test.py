@@ -35,6 +35,10 @@ icon_snowball = pygame.transform.scale(icon_snowball, (70, 70))
 
 mob_image = pygame.image.load('../Assets/basics/mob.png')
 zombie_image = pygame.image.load('../Assets/basics/zombie.png')
+# clases sprites:
+mage_img = pygame.image.load('../Assets/basics/Mage.png')
+tank_img = pygame.image.load('../Assets/basics/Tank.png')
+scout_img = pygame.image.load('../Assets/basics/Scout.png')
 
 
 def time_to_string(t):
@@ -89,7 +93,12 @@ def show_player_and_his_particles(P: player.Player, cx: int, ch: int):
     P.x -= cx
     P.y -= ch
     P_rect.center = P.x, P.y
-    screen.blit(pygame.transform.flip(P_sprite, P.last_dir == -1, False), P_rect)
+    if P.Class == 'Mage':
+        screen.blit(pygame.transform.flip(mage_img, P.last_dir == -1, False), P_rect)
+    elif P.Class == 'Tank':
+        screen.blit(pygame.transform.flip(tank_img, P.last_dir == -1, False), P_rect)
+    elif P.Class == 'Scout':
+        screen.blit(pygame.transform.flip(scout_img, P.last_dir == -1, False), P_rect)
     show_player_health(P)
     show_name(P)
     P.x += cx
@@ -129,8 +138,11 @@ def show_mob_health(M: mob.Mob):
 
 
 def show_player_health(P: player.Player):
+
     pygame.draw.rect(screen, (0, 255, 0), ((P.x - 50, P.y - 70), (P.health, 10)))
     pygame.draw.rect(screen, (255, 0, 0), ((P.x - 50 + P.health, P.y - 70), (100 - P.health, 10)))
+    if P.income_dmg_multiplier == 0:
+        pygame.draw.rect(screen, (255, 255, 0), ((P.x - 50, P.y - 70), (P.health, 10)))
 
 
 def show_inventory(P: player.Player):
@@ -254,8 +266,8 @@ def main():
     chat_enabled = True
     chat_message = ''
     CL = pygame.time.Clock()
-    P = player.Player("Hunnydrips", 0, 0)
-    P2 = player.Player("Glidaria", 0, 0)
+    P = player.Player("Hunnydrips", 0, 0, 'Tank')
+    P2 = player.Player("Glidaria", 0, 0, 'Mage')
     global P_sprite
     P_sprite = pygame.image.load(f'../Assets/basics/{P.Class}.png')
     M = mob.Mob(50, 50, 5)
@@ -265,6 +277,7 @@ def main():
     running = True
     camera_locked = True
     while running:
+        print(P.income_dmg_multiplier)
         screen.fill((0, 0, 255))
         m_x, m_y = pygame.mouse.get_pos()
         frame_counter += 1
