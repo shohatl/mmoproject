@@ -137,8 +137,26 @@ def show_mob_health(M: mob.Mob):
     pygame.draw.rect(screen, (255, 0, 0), ((M.x - 50 + M.health // M.lvl, M.y - 75), (100 - M.health // M.lvl, 10)))
 
 
-def show_player_health(P: player.Player):
+def show_ability_cd(P: player.Player):
+    T = P.get_cd_left()
+    if not P.is_ability_active:
+        if T >= 10:
+            pygame.draw.rect(screen, (40, 30, 240), ((910, 483), (100, 3)))
+        else:
+            T *= 10
+            T = int(T)
+            pygame.draw.rect(screen, (40, 160, 80), ((910, 483), (T, 3)))
+    else:
+        if P.Class == 'Tank':
+            T *= 33
+            T = int(T)
+            pygame.draw.rect(screen, (40, 30, 240), ((910, 483), (100 - T, 3)))
+        elif P.Class == 'Scout':
+            T *= 50
+            T = int(T)
+            pygame.draw.rect(screen, (40, 30, 240), ((910, 483), (100 - T, 3)))
 
+def show_player_health(P: player.Player):
     pygame.draw.rect(screen, (0, 255, 0), ((P.x - 50, P.y - 70), (P.health, 10)))
     pygame.draw.rect(screen, (255, 0, 0), ((P.x - 50 + P.health, P.y - 70), (100 - P.health, 10)))
     if P.income_dmg_multiplier == 0:
@@ -266,7 +284,7 @@ def main():
     chat_enabled = True
     chat_message = ''
     CL = pygame.time.Clock()
-    P = player.Player("Hunnydrips", 0, 0, 'Tank')
+    P = player.Player("Hunnydrips", 0, 0, 'Scout')
     P2 = player.Player("Glidaria", 0, 0, 'Mage')
     global P_sprite
     P_sprite = pygame.image.load(f'../Assets/basics/{P.Class}.png')
@@ -277,7 +295,6 @@ def main():
     running = True
     camera_locked = True
     while running:
-        print(P.income_dmg_multiplier)
         screen.fill((0, 0, 255))
         m_x, m_y = pygame.mouse.get_pos()
         frame_counter += 1
@@ -310,7 +327,6 @@ def main():
                 elif event.key == pygame.K_x and P.inventory[P.picked]:
                     P.gold += P.inventory[P.picked].upgrade_cost * 0.75
                     P.inventory[P.picked] = False
-                    P.picked = 0
                 elif event.key == pygame.K_q:
                     for I in items_on_surface:
                         if I.check_pick_up(P):
@@ -395,6 +411,7 @@ def main():
         show_inventory(P)  # client
         show_time(start_time)  # client
         show_gold(P.gold)  # client
+        show_ability_cd(P)
         CL.tick(60)
         pygame.display.update()
 
