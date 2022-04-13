@@ -80,6 +80,6 @@ class Mob:
                     P_rect.center = P.x, P.y
                     if P_rect.colliderect(M_rect):
                         self.last_attacked = time.time()
-                        P.health -= 10
+                        P.health -= 10*P.income_dmg_multiplier
                         if P.health <= 0:
                             players.remove(P)
