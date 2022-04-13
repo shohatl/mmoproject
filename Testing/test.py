@@ -1,6 +1,7 @@
+import random
 import sys
 import time
-import random
+
 import pygame
 
 from Classes import player, mob, item, dropped_item
@@ -35,7 +36,7 @@ icon_snowball = pygame.transform.scale(icon_snowball, (70, 70))
 
 mob_image = pygame.image.load('../Assets/basics/mob.png')
 zombie_image = pygame.image.load('../Assets/basics/zombie.png')
-# clases sprites:
+# classes sprites:
 mage_img = pygame.image.load('../Assets/basics/Mage.png')
 tank_img = pygame.image.load('../Assets/basics/Tank.png')
 scout_img = pygame.image.load('../Assets/basics/Scout.png')
@@ -137,24 +138,29 @@ def show_mob_health(M: mob.Mob):
     pygame.draw.rect(screen, (255, 0, 0), ((M.x - 50 + M.health // M.lvl, M.y - 75), (100 - M.health // M.lvl, 10)))
 
 
-def show_ability_cd(P: player.Player):
+def show_ability_cool_down(P: player.Player):
     T = P.get_cd_left()
     if not P.is_ability_active:
         if T >= 10:
-            pygame.draw.rect(screen, (40, 30, 240), ((910, 483), (100, 3)))
+            pygame.draw.rect(screen, (40, 30, 240),
+                             ((screen.get_width() // 2 - 50, screen.get_height() // 2 - 57), (100, 3)))
         else:
             T *= 10
             T = int(T)
-            pygame.draw.rect(screen, (40, 160, 80), ((910, 483), (T, 3)))
+            pygame.draw.rect(screen, (40, 160, 80),
+                             ((screen.get_width() // 2 - 50, screen.get_height() // 2 - 57), (T, 3)))
     else:
         if P.Class == 'Tank':
             T *= 33
             T = int(T)
-            pygame.draw.rect(screen, (40, 30, 240), ((910, 483), (100 - T, 3)))
+            pygame.draw.rect(screen, (40, 30, 240),
+                             ((screen.get_width() // 2 - 50, screen.get_height() // 2 - 57), (100 - T, 3)))
         elif P.Class == 'Scout':
             T *= 50
             T = int(T)
-            pygame.draw.rect(screen, (40, 30, 240), ((910, 483), (100 - T, 3)))
+            pygame.draw.rect(screen, (40, 30, 240),
+                             ((screen.get_width() // 2 - 50, screen.get_height() // 2 - 57), (100 - T, 3)))
+
 
 def show_player_health(P: player.Player):
     pygame.draw.rect(screen, (0, 255, 0), ((P.x - 50, P.y - 70), (P.health, 10)))
@@ -411,7 +417,7 @@ def main():
         show_inventory(P)  # client
         show_time(start_time)  # client
         show_gold(P.gold)  # client
-        show_ability_cd(P)
+        show_ability_cool_down(P)  # client
         CL.tick(60)
         pygame.display.update()
 
