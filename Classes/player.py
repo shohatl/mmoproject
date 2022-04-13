@@ -13,7 +13,7 @@ class Player:
         self.dir_y = 0
         self.last_dir = 1
         self.Class = Class
-        self.last_time_used_ability = 0
+        self.last_time_used_ability = time.time()
         self.is_ability_active = False
         self.last_time_moved = 0
         self.last_time_attack = 0
@@ -25,7 +25,8 @@ class Player:
         self.projectiles = []
         self.has_moved = False
         self.picked = 0
-        self.inventory = [item.Item("bow", 1), item.Item('cumball', 90), item.Item('cumball', 69), False, False, item.Item('dagger', 3)]  # to add items later
+        self.inventory = [item.Item("bow", 1), item.Item('cumball', 90), item.Item('cumball', 69), False, False,
+                          item.Item('dagger', 3)]  # to add items later
         self.gold = 0
         self.health = 100
         self.nickname = nickname
@@ -51,21 +52,29 @@ class Player:
     def attack(self, mouseX, mouseY):
         if time.time() - self.last_time_attack > self.inventory[self.picked].cool_down:
             self.last_time_attack = time.time()
-            self.projectiles.append(particle.Particle(self.x, self.y, mouseX, mouseY, self.inventory[self.picked].speed, self.inventory[self.picked].range, self.inventory[self.picked].dmg, self.inventory[self.picked].name))
+            self.projectiles.append(particle.Particle(self.x, self.y, mouseX, mouseY, self.inventory[self.picked].speed,
+                                                      self.inventory[self.picked].range,
+                                                      self.inventory[self.picked].dmg,
+                                                      self.inventory[self.picked].name))
 
     def use_ability(self):
         if time.time() - self.last_time_used_ability > 10:
             self.last_time_used_ability = time.time()
             self.is_ability_active = True
 
+    def get_cd_left(self):
+        return time.time() - self.last_time_used_ability
+
     def ability(self):
         if self.is_ability_active:
             if time.time() - self.last_time_used_ability > 3:
                 self.is_ability_active = False
                 self.income_dmg_multiplier = 1
+                self.last_time_used_ability = time.time()
             if time.time() - self.last_time_used_ability > 2 and self.Class == 'Scout':
                 self.is_ability_active = False
                 self.speed = 8
+                self.last_time_used_ability = time.time()
             if self.Class == "Mage":
                 self.health = 100
                 self.is_ability_active = False
