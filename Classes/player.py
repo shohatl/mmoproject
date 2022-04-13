@@ -6,13 +6,13 @@ collide_list = [4, 5, 22, 23, 26, 39, 40, 41, 43, 57, 59, 60, 75, 76, 77, 78, 92
 
 
 class Player:
-    def __init__(self, nickname, ip, key):
+    def __init__(self, nickname, ip, key, Class):
         self.x = 100
         self.y = 100
         self.dir_x = 0
         self.dir_y = 0
         self.last_dir = 1
-        self.Class = "Mage"
+        self.Class = Class
         self.last_time_used_ability = 0
         self.is_ability_active = False
         self.last_time_moved = 0
@@ -60,10 +60,12 @@ class Player:
 
     def ability(self):
         if self.is_ability_active:
-            if time.time() - self.last_time_used_ability > 2:
+            if time.time() - self.last_time_used_ability > 3:
+                self.is_ability_active = False
+                self.income_dmg_multiplier = 1
+            if time.time() - self.last_time_used_ability > 2 and self.Class == 'Scout':
                 self.is_ability_active = False
                 self.speed = 8
-                self.income_dmg_multiplier = 1
             if self.Class == "Mage":
                 self.health = 100
                 self.is_ability_active = False
@@ -77,7 +79,7 @@ class Player:
             self.income_dmg_multiplier = 1
 
     def use_potion(self):
-        if self.gold > 1000:
+        if self.gold >= 1000:
             self.health += 10
             self.gold -= 1000
             self.health -= self.health // 100 * self.health % 100
