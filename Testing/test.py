@@ -244,6 +244,8 @@ def move_all_mobs_and_their_spear(mobs: list, players: list):
 
 
 def main():
+    camera_x = 0
+    camera_y = 0
     map = pygame.image.load('../Assets/basics/ground2.jpg')
     start_time = time.time()
     chat_log = []
@@ -261,14 +263,13 @@ def main():
     players = [P, P2]
     mobs = [M, M2]
     running = True
+    camera_locked = True
     while running:
         screen.fill((0, 0, 255))
         m_x, m_y = pygame.mouse.get_pos()
         frame_counter += 1
         frame_counter %= 60
         keys = pygame.key.get_pressed()
-        camera_x = P.x - screen.get_width() // 2
-        camera_y = P.y - screen.get_height() // 2
         for event in pygame.event.get():
             if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 pygame.quit()
@@ -313,6 +314,8 @@ def main():
                     P.use_potion()
                 elif pygame.K_1 <= event.key <= pygame.K_6:
                     P.picked = int(event.unicode) - 1
+                elif event.key == pygame.K_y:
+                    camera_locked = not camera_locked
             elif event.type == pygame.MOUSEBUTTONDOWN and not in_chat:
                 if event.button == 1 and P.inventory[P.picked]:
                     P.attack(m_x + camera_x, m_y + camera_y)
@@ -330,8 +333,12 @@ def main():
         move_all_mobs_and_their_spear(mobs, players)  # server
         identify_par_dmg(players, mobs)  # server
         # --------------------------------
-        camera_x = P.x - screen.get_width() // 2
-        camera_y = P.y - screen.get_height() // 2
+        if camera_locked:
+            camera_x = P.x - screen.get_width() // 2
+            camera_y = P.y - screen.get_height() // 2
+        else:
+            camera_x -= 20 * (keys[pygame.K_LEFT] - keys[pygame.K_RIGHT])
+            camera_y += 20 * (keys[pygame.K_DOWN] - keys[pygame.K_UP])
         screen.blit(map, (0, 0), ((camera_x, camera_y), screen.get_size()))
 
         # show all the entities
