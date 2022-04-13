@@ -85,26 +85,42 @@ def identify_par_dmg(Ps: list, Ms: list):
                             Ps.remove(P2)
 
 
-def show_player_and_his_particles(P: player.Player):
+def show_player_and_his_particles(P: player.Player, cx: int, ch: int):
+    P.x -= cx
+    P.y -= ch
     P_rect.center = P.x, P.y
     screen.blit(pygame.transform.flip(P_sprite, P.last_dir == -1, False), P_rect)
     show_player_health(P)
     show_name(P)
-    for par in P.projectiles:
-        screen.blit(par.image, par.hit_box)
+    P.x += cx
+    P.y += ch
+    for S in P.projectiles:
+        S.hit_box.x -= cx
+        S.hit_box.y -= ch
+        screen.blit(S.image, S.hit_box)
+        S.hit_box.x += cx
+        S.hit_box.y += ch
 
 
-def show_mob_and_his_spears(M: mob.Mob):
+def show_mob_and_his_spears(M: mob.Mob, cx: int, ch: int):
     if M.is_alive:
+        M.x -= cx
+        M.y -= ch
         M_rect.center = M.x, M.y
         if M.is_melee:
-            screen.blit(pygame.transform.flip(zombie_image, M.last_dir, False), M_rect)
+            screen.blit(zombie_image, M_rect)
         else:
-            screen.blit(pygame.transform.flip(mob_image, not M.last_dir, False), M_rect)
+            screen.blit(mob_image, M_rect)
         show_mob_lvl(M)
         show_mob_health(M)
-    for spear in M.spears:
-        screen.blit(spear.image, spear.hit_box)
+        M.x += cx
+        M.y += ch
+    for S in M.spears:
+        S.hit_box.x -= cx
+        S.hit_box.y -= ch
+        screen.blit(S.image, S.hit_box)
+        S.hit_box.x += cx
+        S.hit_box.y += ch
 
 
 def show_mob_health(M: mob.Mob):
@@ -228,6 +244,7 @@ def move_all_mobs_and_their_spear(mobs: list, players: list):
 
 
 def main():
+    map = pygame.image.load('../Assets/basics/ground2.jpg')
     start_time = time.time()
     chat_log = []
     frame_counter = 0
@@ -250,6 +267,8 @@ def main():
         frame_counter += 1
         frame_counter %= 60
         keys = pygame.key.get_pressed()
+        camera_x = P.x - screen.get_width() // 2
+        camera_y = P.y - screen.get_height() // 2
         for event in pygame.event.get():
             if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 pygame.quit()
@@ -274,7 +293,7 @@ def main():
                     chat_enabled = not chat_enabled
                 elif event.key == pygame.K_e:
                     P.use_ability()
-                elif event.key == pygame.K_x and P.picked and P.inventory[P.picked]:
+                elif event.key == pygame.K_x and P.inventory[P.picked]:
                     P.gold += P.inventory[P.picked].upgrade_cost * 0.75
                     P.inventory[P.picked] = False
                     P.picked = 0
@@ -296,7 +315,7 @@ def main():
                     P.picked = int(event.unicode) - 1
             elif event.type == pygame.MOUSEBUTTONDOWN and not in_chat:
                 if event.button == 1 and P.inventory[P.picked]:
-                    P.attack(m_x, m_y)
+                    P.attack(m_x + camera_x, m_y + camera_y)
                 elif event.button == 4:
                     P.picked += 1
                     P.picked %= 6
@@ -311,12 +330,15 @@ def main():
         move_all_mobs_and_their_spear(mobs, players)  # server
         identify_par_dmg(players, mobs)  # server
         # --------------------------------
+        camera_x = P.x - screen.get_width() // 2
+        camera_y = P.y - screen.get_height() // 2
+        screen.blit(map, (0, 0), ((camera_x, camera_y), screen.get_size()))
 
         # show all the entities
         for M in mobs:
-            show_mob_and_his_spears(M)
+            show_mob_and_his_spears(M, camera_x, camera_y)
         for Pl in players:
-            show_player_and_his_particles(Pl)
+            show_player_and_his_particles(Pl, camera_x, camera_y)
         # -----------------
 
         # ------------------------------ display chat messages
@@ -326,7 +348,7 @@ def main():
                 screen.blit(font.render(msg, True, (255, 255, 255)), (20, height_of_msg))
                 height_of_msg += 30
         # ------------------------------------
-##
+        ##
         # ------------------------------------- show the typed message
         if in_chat:
             if keys[pygame.K_BACKSPACE] and keys[pygame.K_LCTRL]:
@@ -344,7 +366,11 @@ def main():
         for I in items_on_surface:
             if time.time() - I.time_dropped > 7:
                 items_on_surface.remove(I)
+            I.x -= camera_x
+            I.y -= camera_y
             I.show_item_on_surface(screen)
+            I.x += camera_x
+            I.y += camera_y
         # -------------------------------------
         show_inventory(P)  # client
         show_time(start_time)  # client
