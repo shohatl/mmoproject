@@ -279,10 +279,19 @@ def move_all_mobs_and_their_spear(mobs: list, players: list):
             spear.move(0, 0)
 
 
+def rolling_world(x, y, img):
+    screen.blit(img, (0, 0), ((x % img.get_width(), y % img.get_height()), screen.get_size()))
+    screen.blit(img, (img.get_width() - x % img.get_width(), img.get_height() - y % img.get_height()))
+    screen.blit(img, (0 - x % img.get_width(), img.get_height() - y % img.get_height()))
+    screen.blit(img, (img.get_width() - x % img.get_width(), 0 - y % img.get_height()))
+
+
 def main():
     camera_x = 0
     camera_y = 0
+    tile_set = pygame.image.load('../Assets/TileMaps/tileset64.png')
     map = pygame.image.load('../Assets/basics/ground2.jpg')
+    # map = pygame.transform.scale(map, (1920, 1080))
     start_time = time.time()
     chat_log = []
     frame_counter = 0
@@ -374,7 +383,11 @@ def main():
         else:
             camera_x -= 20 * (keys[pygame.K_LEFT] - keys[pygame.K_RIGHT])
             camera_y += 20 * (keys[pygame.K_DOWN] - keys[pygame.K_UP])
-        screen.blit(map, (0, 0), ((camera_x, camera_y), screen.get_size()))
+
+        t = time.time()
+        # screen.blit(map, (0, 0), ((camera_x, camera_y), screen.get_size()))
+        rolling_world(camera_x, camera_y, map)
+        print(time.time() - t)
 
         # show all the entities
         for M in mobs:
