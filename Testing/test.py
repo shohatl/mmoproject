@@ -237,6 +237,29 @@ def show_name(P: player.Player):
     screen.blit(name, name_rect)
 
 
+def show_chat_messages(chat_enabled: bool, chat_log: list):
+    if chat_enabled:
+        height_of_msg = 10
+        for msg in chat_log:
+            screen.blit(font.render(msg, True, (255, 255, 255)), (20, height_of_msg))
+            height_of_msg += 30
+
+
+def update_drops():
+    for I in items_on_surface:
+        if time.time() - I.time_dropped > 7:
+            items_on_surface.remove(I)
+
+
+def drop_items(C_x: int, C_y: int):
+    for I in items_on_surface:
+        I.x -= C_x
+        I.y -= C_y
+        I.show_item_on_surface(screen)
+        I.x += C_x
+        I.y += C_y
+
+
 def generate_drop(x, y, average):
     lvl = abs(random.randint(average - 11, average + 9)) + 1
     name = random.randint(0, 2)
@@ -384,10 +407,7 @@ def main():
             camera_x -= 20 * (keys[pygame.K_LEFT] - keys[pygame.K_RIGHT])
             camera_y += 20 * (keys[pygame.K_DOWN] - keys[pygame.K_UP])
 
-        t = time.time()
-        # screen.blit(map, (0, 0), ((camera_x, camera_y), screen.get_size()))
         rolling_world(camera_x, camera_y, map)
-        print(time.time() - t)
 
         # show all the entities
         for M in mobs:
@@ -397,11 +417,7 @@ def main():
         # -----------------
 
         # ------------------------------ display chat messages
-        if chat_enabled:
-            height_of_msg = 10
-            for msg in chat_log:
-                screen.blit(font.render(msg, True, (255, 255, 255)), (20, height_of_msg))
-                height_of_msg += 30
+        show_chat_messages(chat_enabled, chat_log)  # client
         # ------------------------------------
         ##
         # ------------------------------------- show the typed message
@@ -411,21 +427,15 @@ def main():
             if keys[pygame.K_BACKSPACE] and chat_message and not frame_counter % 4:
                 chat_message = chat_message[:-1]
             screen.blit(chat_box, (10, 200))
-            blinking_shit = ''
+            blinking_indicator = ''
             if frame_counter < 30:
-                blinking_shit = '|'
-            screen.blit(font.render(chat_message + blinking_shit, True, (255, 255, 255)), (13, 205))
+                blinking_indicator = '|'
+            screen.blit(font.render(chat_message + blinking_indicator, True, (255, 255, 255)), (13, 205))
         # ------------------------------------
 
         # --------------- remove on floor items
-        for I in items_on_surface:
-            if time.time() - I.time_dropped > 7:
-                items_on_surface.remove(I)
-            I.x -= camera_x
-            I.y -= camera_y
-            I.show_item_on_surface(screen)
-            I.x += camera_x
-            I.y += camera_y
+        update_drops()  # server
+        drop_items(camera_x, camera_y)  # client
         # -------------------------------------
         show_inventory(P)  # client
         show_time(start_time)  # client
