@@ -28,7 +28,7 @@ class Mob:
         self.home_y = self.y
         self.trigger_range = 1200 + 600 * int(self.is_melee)
         self.home_range = 1000 + 1000 * int(self.is_melee)
-        self.spears = []
+        self.projectiles = []
 
     def move(self, players):
         if time.time() - self.last_time_moved < 10 ** -3:
@@ -71,7 +71,7 @@ class Mob:
         if self.has_target and time.time() - self.last_attacked > 2:
             if not self.is_melee:
                 self.last_attacked = time.time()
-                self.spears.append(particle.Particle(self.x, self.y, self.target_x, self.target_y, 20, 800, self.lvl * 5, 'spear'))
+                self.projectiles.append(particle.Particle(self.x, self.y, self.target_x, self.target_y, 20, 800, self.lvl * 5, 'spear'))
             else:
                 M_rect = pygame.Rect((0, 0), (88, 120))
                 M_rect.center = self.x, self.y
