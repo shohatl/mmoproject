@@ -4,3 +4,4 @@ class Config:
         self.chat_enabled = True
         self.camera_locked = True
         self.chat_message = ''
+        self.chat_log = []
