@@ -343,7 +343,6 @@ def main():
     P2 = player.Player(nickname="Glidaria", key=0, ip=0, Class='Mage')
     M = mob.Mob(x=50, y=50, lvl=5)
     M2 = mob.Mob(x=500, y=50, lvl=3)
-    show_entities_and_their_particles(entity=M, cx=0, ch=0)
     players = [P, P2]
     mobs = [M, M2]
     running = True
