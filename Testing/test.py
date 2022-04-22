@@ -4,7 +4,7 @@ import time
 
 import pygame
 
-from Classes import player, mob, item, dropped_item
+from Classes import player, mob, item, dropped_item, config
 
 pygame.init()
 screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
@@ -100,8 +100,8 @@ def show_entities_and_their_particles(entity, cx: int, ch: int):
                 screen.blit(zombie_image, M_rect)
             else:
                 screen.blit(mob_image, M_rect)
-            show_mob_lvl(entity)
-            show_mob_health(entity)
+            show_mob_lvl(M=entity)
+            show_mob_health(M=entity)
     else:
         P_rect.center = entity.x, entity.y
         if entity.Class == 'Mage':
@@ -127,28 +127,25 @@ def show_mob_health(M: mob.Mob):
     pygame.draw.rect(screen, (255, 0, 0), ((M.x - 50 + M.health // M.lvl, M.y - 75), (100 - M.health // M.lvl, 10)))
 
 
-def show_ability_cool_down(P: player.Player):
+def show_ability_cool_down(P: player.Player, camera_x: int, camera_y: int):
     T = P.get_cd_left()
     if not P.is_ability_active:
         if T >= 10:
             pygame.draw.rect(screen, (40, 30, 240),
-                             ((screen.get_width() // 2 - 50, screen.get_height() // 2 - 57), (100, 3)))
+                             ((P.x - camera_x - 50, P.y - camera_y - 57), (100, 3)))
         else:
             T *= 10
             T = int(T)
             pygame.draw.rect(screen, (40, 160, 80),
-                             ((screen.get_width() // 2 - 50, screen.get_height() // 2 - 57), (T, 3)))
+                             ((P.x - camera_x - 50, P.y - camera_y - 57), (T, 3)))
     else:
         if P.Class == 'Tank':
             T *= 33
             T = int(T)
-            pygame.draw.rect(screen, (40, 30, 240),
-                             ((screen.get_width() // 2 - 50, screen.get_height() // 2 - 57), (100 - T, 3)))
         elif P.Class == 'Scout':
             T *= 50
             T = int(T)
-            pygame.draw.rect(screen, (40, 30, 240),
-                             ((screen.get_width() // 2 - 50, screen.get_height() // 2 - 57), (100 - T, 3)))
+        pygame.draw.rect(screen, (40, 30, 240), ((P.x - camera_x - 50, P.y - camera_y - 57), (100 - T, 3)))
 
 
 def show_player_health(P: player.Player):
@@ -236,7 +233,7 @@ def generate_drop(x, y, average):
     return dropped_item.Dropped_item(x, y, lvl, "cumball", time.time())
 
 
-def move(P2: player.Player, P: player.Player):
+def update_player_direction_based_on_input(P2: player.Player, P: player.Player):
     keys = pygame.key.get_pressed()
     P.dir_x = keys[pygame.K_d] - keys[pygame.K_a]
     P.dir_y = keys[pygame.K_s] - keys[pygame.K_w]
@@ -248,27 +245,28 @@ def move_all_players_and_their_particles(players: list):
     for Pl in players:
         Pl.move()
         Pl.ability()
-        for par in Pl.projectiles:
-            if par.range <= 0:
-                Pl.projectiles.remove(par)
-            par.move(Pl.x, Pl.y)
+        move_particles_for_entity(entity=Pl)
 
 
 def move_all_mobs_and_their_spear(mobs: list, players: list):
     for Mo in mobs:
         if Mo.is_alive:
-            Mo.move(players)
+            Mo.move(players=players)
         elif time.time() - Mo.death_time >= 7:
             Mo.is_alive = True
             Mo.x, Mo.y = Mo.home_x, Mo.home_y
             Mo.health = 100 * Mo.lvl
-        for spear in Mo.projectiles:
-            if spear.range <= 0:
-                Mo.spears.remove(spear)
-            spear.move(0, 0)
+        move_particles_for_entity(entity=Mo)
 
 
-def rolling_world(x, y, img):
+def move_particles_for_entity(entity):
+    for particle in entity.projectiles:
+        if particle.range <= 0:
+            entity.projectiles.remove(particle)
+        particle.move(entity.x, entity.y)
+
+
+def show_background(x, y, img):
     screen.blit(img, (0, 0), ((x % img.get_width(), y % img.get_height()), screen.get_size()))
     screen.blit(img, (img.get_width() - x % img.get_width(), img.get_height() - y % img.get_height()))
     screen.blit(img, (0 - x % img.get_width(), img.get_height() - y % img.get_height()))
@@ -276,18 +274,15 @@ def rolling_world(x, y, img):
 
 
 def main():
+    settings = config.Config()
     camera_x = 0
     camera_y = 0
-    map = pygame.image.load('../Assets/basics/ground2.jpg')
-    # map = pygame.transform.scale(map, (1920, 1080))
+    map_img = pygame.image.load('../Assets/basics/ground2.jpg')
     start_time = time.time()
     chat_log = []
     frame_counter = 0
-    in_chat = False
-    chat_enabled = True
-    chat_message = ''
     CL = pygame.time.Clock()
-    P = player.Player(nickname="Hunnydrips", key=0, ip=0, Class='Tank')
+    P = player.Player(nickname="Hunnydrips", key=0, ip=0, Class='Scout')
     P2 = player.Player(nickname="Glidaria", key=0, ip=0, Class='Mage')
     M = mob.Mob(x=50, y=50, lvl=5)
     M2 = mob.Mob(x=500, y=50, lvl=3)
@@ -295,7 +290,7 @@ def main():
     players = [P, P2]
     mobs = [M, M2]
     running = True
-    camera_locked = True
+
     while running:
         screen.fill((0, 0, 255))
         m_x, m_y = pygame.mouse.get_pos()
@@ -307,37 +302,38 @@ def main():
                 pygame.quit()
                 sys.exit()
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN and chat_enabled:
-                    in_chat = not in_chat
-                    if not in_chat:
-                        if chat_message:
+                if event.key == pygame.K_RETURN and settings.chat_enabled:
+                    settings.in_chat = not settings.in_chat
+                    if not settings.in_chat:
+                        if settings.chat_message:
                             while len(chat_log) >= 5:
                                 chat_log = chat_log[1:]
                             chat_log.append(
-                                f'({P.nickname}): {chat_message} [{time_to_string(time.time() - start_time)}]')
-                            chat_message = ''
+                                f'({P.nickname}): {settings.chat_message} [{time_to_string(time.time() - start_time)}]')
+                            settings.chat_message = ''
                     else:
                         P.dir_x = 0
                         P.dir_y = 0
-                elif in_chat:
-                    if len(chat_message) < 45 and '~' >= event.unicode >= ' ':
-                        chat_message += event.unicode
+                elif settings.in_chat:
+                    if len(settings.chat_message) < 45 and '~' >= event.unicode >= ' ':
+                        settings.chat_message += event.unicode
                 elif event.key == pygame.K_TAB:
-                    chat_enabled = not chat_enabled
+                    settings.chat_enabled = not settings.chat_enabled
                 elif event.key == pygame.K_e:
                     P.use_ability()
                 elif event.key == pygame.K_x and P.inventory[P.picked]:
                     P.gold += P.inventory[P.picked].upgrade_cost * 0.75
                     P.inventory[P.picked] = False
                 elif event.key == pygame.K_q:
-                    for I in items_on_surface:
-                        if I.check_pick_up(P):
+                    for item_on_surface in items_on_surface:
+                        if item_on_surface.check_pick_up(P):
                             if P.inventory[P.picked]:
                                 P.gold += P.inventory[P.picked].upgrade_cost * 0.6
-                            P.inventory[P.picked] = item.Item(I.name, I.lvl)
-                            items_on_surface.remove(I)
+                            P.inventory[P.picked] = item.Item(item_on_surface.name, item_on_surface.lvl)
+                            items_on_surface.remove(item_on_surface)
                             break
-                elif event.key == pygame.K_u and P.inventory[P.picked].lvl < 999 and P.inventory[P.picked].upgrade_cost \
+                elif event.key == pygame.K_u and P.inventory[P.picked].lvl < 999 and P.inventory[
+                    P.picked].upgrade_cost \
                         <= P.gold:
                     P.gold -= P.inventory[P.picked].upgrade_cost
                     P.inventory[P.picked].upgrade()
@@ -346,8 +342,8 @@ def main():
                 elif pygame.K_1 <= event.key <= pygame.K_6:
                     P.picked = int(event.unicode) - 1
                 elif event.key == pygame.K_y:
-                    camera_locked = not camera_locked
-            elif event.type == pygame.MOUSEBUTTONDOWN and not in_chat:
+                    settings.camera_locked = not settings.camera_locked
+            elif event.type == pygame.MOUSEBUTTONDOWN and not settings.in_chat:
                 if event.button == 1 and P.inventory[P.picked]:
                     P.attack(mouseX=m_x + camera_x, mouseY=m_y + camera_y)
                 elif event.button == 4:
@@ -356,21 +352,21 @@ def main():
                 elif event.button == 5:
                     P.picked -= 1
                     P.picked %= 6
+        if not settings.in_chat:
+            update_player_direction_based_on_input(P2=P2, P=P)  # client
 
-        if not in_chat:
-            move(P2=P2, P=P)  # client
         # ------------------ update all locations data
         move_all_players_and_their_particles(players=players)  # server
         move_all_mobs_and_their_spear(mobs=mobs, players=players)  # server
         identify_par_dmg(Ps=players, Ms=mobs)  # server
         # --------------------------------
-        if camera_locked:
+        if settings.camera_locked:
             camera_x = P.x - screen.get_width() // 2
             camera_y = P.y - screen.get_height() // 2
         else:
             camera_x -= 20 * (keys[pygame.K_LEFT] - keys[pygame.K_RIGHT])
             camera_y += 20 * (keys[pygame.K_DOWN] - keys[pygame.K_UP])
-        rolling_world(x=camera_x, y=camera_y, img=map)
+        show_background(x=camera_x, y=camera_y, img=map_img)
 
         # show all the entities
         for M in mobs:
@@ -380,7 +376,7 @@ def main():
         # -----------------
 
         # ------------------------------ display chat messages
-        if chat_enabled:
+        if settings.chat_enabled:
             height_of_msg = 10
             for msg in chat_log:
                 screen.blit(font.render(msg, True, (255, 255, 255)), (20, height_of_msg))
@@ -388,32 +384,32 @@ def main():
         # ------------------------------------
         ##
         # ------------------------------------- show the typed message
-        if in_chat:
+        if settings.in_chat:
             if keys[pygame.K_BACKSPACE] and keys[pygame.K_LCTRL]:
-                chat_message = ''
-            if keys[pygame.K_BACKSPACE] and chat_message and not frame_counter % 4:
-                chat_message = chat_message[:-1]
+                settings.chat_message = ''
+            if keys[pygame.K_BACKSPACE] and settings.chat_message and not frame_counter % 4:
+                settings.chat_message = settings.chat_message[:-1]
             screen.blit(chat_box, (10, 200))
             blinking_shit = ''
             if frame_counter < 30:
                 blinking_shit = '|'
-            screen.blit(font.render(chat_message + blinking_shit, True, (255, 255, 255)), (13, 205))
+            screen.blit(font.render(settings.chat_message + blinking_shit, True, (255, 255, 255)), (13, 205))
         # ------------------------------------
 
         # --------------- remove on floor items
-        for I in items_on_surface:
-            if time.time() - I.time_dropped > 7:
-                items_on_surface.remove(I)
-            I.x -= camera_x
-            I.y -= camera_y
-            I.show_item_on_surface(screen=screen)
-            I.x += camera_x
-            I.y += camera_y
+        for item_on_surface in items_on_surface:
+            if time.time() - item_on_surface.time_dropped > 7:
+                items_on_surface.remove(item_on_surface)
+            item_on_surface.x -= camera_x
+            item_on_surface.y -= camera_y
+            item_on_surface.show_item_on_surface(screen=screen)
+            item_on_surface.x += camera_x
+            item_on_surface.y += camera_y
         # -------------------------------------
         show_inventory(P=P)  # client
         show_time(start_time=start_time)  # client
         show_gold(gold=P.gold)  # client
-        show_ability_cool_down(P=P)  # client
+        show_ability_cool_down(P=P, camera_x=camera_x, camera_y=camera_y)  # client
         CL.tick(60)
         pygame.display.update()
 
