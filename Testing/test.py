@@ -53,11 +53,11 @@ def identify_par_dmg(Ps: list, Ms: list):
     :return: new health for each entity
     """
     for M in Ms:
-        for S in M.spears:
+        for S in M.projectiles:
             for P in Ps:
                 P_rect.center = P.x, P.y
                 if P_rect.colliderect(S.hit_box) and not S.hit:
-                    M.spears.remove(S)
+                    M.projectiles.remove(S)
                     S.hit = True
                     P.health -= int(10 * P.income_dmg_multiplier)
                     if P.health <= 0:
@@ -90,42 +90,31 @@ def identify_par_dmg(Ps: list, Ms: list):
                             Ps.remove(P2)
 
 
-def show_player_and_his_particles(P: player.Player, cx: int, ch: int):
-    P.x -= cx
-    P.y -= ch
-    P_rect.center = P.x, P.y
-    if P.Class == 'Mage':
-        screen.blit(pygame.transform.flip(mage_img, P.last_dir == -1, False), P_rect)
-    elif P.Class == 'Tank':
-        screen.blit(pygame.transform.flip(tank_img, P.last_dir == -1, False), P_rect)
-    elif P.Class == 'Scout':
-        screen.blit(pygame.transform.flip(scout_img, P.last_dir == -1, False), P_rect)
-    show_player_health(P)
-    show_name(P)
-    P.x += cx
-    P.y += ch
-    for S in P.projectiles:
-        S.hit_box.x -= cx
-        S.hit_box.y -= ch
-        screen.blit(S.image, S.hit_box)
-        S.hit_box.x += cx
-        S.hit_box.y += ch
-
-
-def show_mob_and_his_spears(M: mob.Mob, cx: int, ch: int):
-    if M.is_alive:
-        M.x -= cx
-        M.y -= ch
-        M_rect.center = M.x, M.y
-        if M.is_melee:
-            screen.blit(zombie_image, M_rect)
-        else:
-            screen.blit(mob_image, M_rect)
-        show_mob_lvl(M)
-        show_mob_health(M)
-        M.x += cx
-        M.y += ch
-    for S in M.spears:
+def show_entities_and_their_particles(entity, cx: int, ch: int):
+    entity.x -= cx
+    entity.y -= ch
+    if type(entity) == type(mob.Mob(x=0, y=0, lvl=0)):
+        M_rect.center = entity.x, entity.y
+        if entity.is_alive:
+            if entity.is_melee:
+                screen.blit(zombie_image, M_rect)
+            else:
+                screen.blit(mob_image, M_rect)
+            show_mob_lvl(entity)
+            show_mob_health(entity)
+    else:
+        P_rect.center = entity.x, entity.y
+        if entity.Class == 'Mage':
+            screen.blit(pygame.transform.flip(mage_img, entity.last_dir == -1, False), P_rect)
+        elif entity.Class == 'Tank':
+            screen.blit(pygame.transform.flip(tank_img, entity.last_dir == -1, False), P_rect)
+        elif entity.Class == 'Scout':
+            screen.blit(pygame.transform.flip(scout_img, entity.last_dir == -1, False), P_rect)
+        show_player_health(P=entity)
+        show_name(P=entity)
+    entity.x += cx
+    entity.y += ch
+    for S in entity.projectiles:
         S.hit_box.x -= cx
         S.hit_box.y -= ch
         screen.blit(S.image, S.hit_box)
@@ -273,7 +262,7 @@ def move_all_mobs_and_their_spear(mobs: list, players: list):
             Mo.is_alive = True
             Mo.x, Mo.y = Mo.home_x, Mo.home_y
             Mo.health = 100 * Mo.lvl
-        for spear in Mo.spears:
+        for spear in Mo.projectiles:
             if spear.range <= 0:
                 Mo.spears.remove(spear)
             spear.move(0, 0)
@@ -289,7 +278,6 @@ def rolling_world(x, y, img):
 def main():
     camera_x = 0
     camera_y = 0
-    tile_set = pygame.image.load('../Assets/TileMaps/tileset64.png')
     map = pygame.image.load('../Assets/basics/ground2.jpg')
     # map = pygame.transform.scale(map, (1920, 1080))
     start_time = time.time()
@@ -299,12 +287,11 @@ def main():
     chat_enabled = True
     chat_message = ''
     CL = pygame.time.Clock()
-    P = player.Player("Hunnydrips", 0, 0, 'Scout')
-    P2 = player.Player("Glidaria", 0, 0, 'Mage')
-    global P_sprite
-    P_sprite = pygame.image.load(f'../Assets/basics/{P.Class}.png')
-    M = mob.Mob(50, 50, 5)
-    M2 = mob.Mob(500, 50, 3)
+    P = player.Player(nickname="Hunnydrips", key=0, ip=0, Class='Tank')
+    P2 = player.Player(nickname="Glidaria", key=0, ip=0, Class='Mage')
+    M = mob.Mob(x=50, y=50, lvl=5)
+    M2 = mob.Mob(x=500, y=50, lvl=3)
+    show_entities_and_their_particles(entity=M, cx=0, ch=0)
     players = [P, P2]
     mobs = [M, M2]
     running = True
@@ -362,7 +349,7 @@ def main():
                     camera_locked = not camera_locked
             elif event.type == pygame.MOUSEBUTTONDOWN and not in_chat:
                 if event.button == 1 and P.inventory[P.picked]:
-                    P.attack(m_x + camera_x, m_y + camera_y)
+                    P.attack(mouseX=m_x + camera_x, mouseY=m_y + camera_y)
                 elif event.button == 4:
                     P.picked += 1
                     P.picked %= 6
@@ -371,11 +358,11 @@ def main():
                     P.picked %= 6
 
         if not in_chat:
-            move(P2, P)  # client
+            move(P2=P2, P=P)  # client
         # ------------------ update all locations data
-        move_all_players_and_their_particles(players)  # server
-        move_all_mobs_and_their_spear(mobs, players)  # server
-        identify_par_dmg(players, mobs)  # server
+        move_all_players_and_their_particles(players=players)  # server
+        move_all_mobs_and_their_spear(mobs=mobs, players=players)  # server
+        identify_par_dmg(Ps=players, Ms=mobs)  # server
         # --------------------------------
         if camera_locked:
             camera_x = P.x - screen.get_width() // 2
@@ -383,17 +370,13 @@ def main():
         else:
             camera_x -= 20 * (keys[pygame.K_LEFT] - keys[pygame.K_RIGHT])
             camera_y += 20 * (keys[pygame.K_DOWN] - keys[pygame.K_UP])
-
-        t = time.time()
-        # screen.blit(map, (0, 0), ((camera_x, camera_y), screen.get_size()))
-        rolling_world(camera_x, camera_y, map)
-        print(time.time() - t)
+        rolling_world(x=camera_x, y=camera_y, img=map)
 
         # show all the entities
         for M in mobs:
-            show_mob_and_his_spears(M, camera_x, camera_y)
+            show_entities_and_their_particles(entity=M, cx=camera_x, ch=camera_y)
         for Pl in players:
-            show_player_and_his_particles(Pl, camera_x, camera_y)
+            show_entities_and_their_particles(entity=Pl, cx=camera_x, ch=camera_y)
         # -----------------
 
         # ------------------------------ display chat messages
@@ -423,14 +406,14 @@ def main():
                 items_on_surface.remove(I)
             I.x -= camera_x
             I.y -= camera_y
-            I.show_item_on_surface(screen)
+            I.show_item_on_surface(screen=screen)
             I.x += camera_x
             I.y += camera_y
         # -------------------------------------
-        show_inventory(P)  # client
-        show_time(start_time)  # client
-        show_gold(P.gold)  # client
-        show_ability_cool_down(P)  # client
+        show_inventory(P=P)  # client
+        show_time(start_time=start_time)  # client
+        show_gold(gold=P.gold)  # client
+        show_ability_cool_down(P=P)  # client
         CL.tick(60)
         pygame.display.update()
 
