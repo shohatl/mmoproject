@@ -111,7 +111,7 @@ def show_entities_and_their_particles(entity, cx: int, ch: int):
         elif entity.Class == 'Scout':
             screen.blit(pygame.transform.flip(scout_img, entity.last_dir == -1, False), P_rect)
         show_player_health(P=entity)
-        show_name(P=entity)
+        show_player_nickname(P=entity)
     entity.x += cx
     entity.y += ch
     for S in entity.projectiles:
@@ -215,7 +215,7 @@ def show_mob_lvl(M: mob.Mob):
     screen.blit(name, name_rect)
 
 
-def show_name(P: player.Player):
+def show_player_nickname(P: player.Player):
     name = font.render(P.nickname, True, (0, 0, 0))
     name_rect = name.get_rect()
     name_rect.center = P.x, P.y
@@ -273,16 +273,73 @@ def show_background(x, y, img):
     screen.blit(img, (img.get_width() - x % img.get_width(), 0 - y % img.get_height()))
 
 
+def handle_input(P: player.Player, settings: config.Config, start_time: float, camera_x: int, camera_y: int):
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+            pygame.quit()
+            sys.exit()
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RETURN and settings.chat_enabled:
+                settings.in_chat = not settings.in_chat
+                if not settings.in_chat:
+                    if settings.chat_message:
+                        while len(settings.chat_log) >= 5:
+                            settings.chat_log = settings.chat_log[1:]
+                        settings.chat_log.append(
+                            f'({P.nickname}): {settings.chat_message} [{time_to_string(time.time() - start_time)}]')
+                        settings.chat_message = ''
+                else:
+                    P.dir_x = 0
+                    P.dir_y = 0
+            elif settings.in_chat:
+                if len(settings.chat_message) < 45 and '~' >= event.unicode >= ' ':
+                    settings.chat_message += event.unicode
+            elif event.key == pygame.K_TAB:
+                settings.chat_enabled = not settings.chat_enabled
+            elif event.key == pygame.K_e:
+                P.use_ability()
+            elif event.key == pygame.K_x and P.inventory[P.picked]:
+                P.gold += P.inventory[P.picked].upgrade_cost * 0.75
+                P.inventory[P.picked] = False
+            elif event.key == pygame.K_q:
+                for item_on_surface in items_on_surface:
+                    if item_on_surface.check_pick_up(P):
+                        if P.inventory[P.picked]:
+                            P.gold += P.inventory[P.picked].upgrade_cost * 0.6
+                        P.inventory[P.picked] = item.Item(item_on_surface.name, item_on_surface.lvl)
+                        items_on_surface.remove(item_on_surface)
+                        break
+            elif event.key == pygame.K_u and P.inventory[P.picked].lvl < 999\
+                    and P.inventory[P.picked].upgrade_cost <= P.gold:
+                P.gold -= P.inventory[P.picked].upgrade_cost
+                P.inventory[P.picked].upgrade()
+            elif event.key == pygame.K_p:
+                P.use_potion()
+            elif pygame.K_1 <= event.key <= pygame.K_6:
+                P.picked = int(event.unicode) - 1
+            elif event.key == pygame.K_y:
+                settings.camera_locked = not settings.camera_locked
+        elif event.type == pygame.MOUSEBUTTONDOWN and not settings.in_chat:
+            if event.button == 1 and P.inventory[P.picked]:
+                m_x, m_y = pygame.mouse.get_pos()
+                P.attack(mouseX=m_x + camera_x, mouseY=m_y + camera_y)
+            elif event.button == 4:
+                P.picked += 1
+                P.picked %= 6
+            elif event.button == 5:
+                P.picked -= 1
+                P.picked %= 6
+
+
 def main():
     settings = config.Config()
+    P = player.Player(nickname="Hunnydrips", key=0, ip=0, Class='Scout')
     camera_x = 0
     camera_y = 0
     map_img = pygame.image.load('../Assets/basics/ground2.jpg')
     start_time = time.time()
-    chat_log = []
     frame_counter = 0
     CL = pygame.time.Clock()
-    P = player.Player(nickname="Hunnydrips", key=0, ip=0, Class='Scout')
     P2 = player.Player(nickname="Glidaria", key=0, ip=0, Class='Mage')
     M = mob.Mob(x=50, y=50, lvl=5)
     M2 = mob.Mob(x=500, y=50, lvl=3)
@@ -293,65 +350,10 @@ def main():
 
     while running:
         screen.fill((0, 0, 255))
-        m_x, m_y = pygame.mouse.get_pos()
         frame_counter += 1
         frame_counter %= 60
         keys = pygame.key.get_pressed()
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
-                pygame.quit()
-                sys.exit()
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN and settings.chat_enabled:
-                    settings.in_chat = not settings.in_chat
-                    if not settings.in_chat:
-                        if settings.chat_message:
-                            while len(chat_log) >= 5:
-                                chat_log = chat_log[1:]
-                            chat_log.append(
-                                f'({P.nickname}): {settings.chat_message} [{time_to_string(time.time() - start_time)}]')
-                            settings.chat_message = ''
-                    else:
-                        P.dir_x = 0
-                        P.dir_y = 0
-                elif settings.in_chat:
-                    if len(settings.chat_message) < 45 and '~' >= event.unicode >= ' ':
-                        settings.chat_message += event.unicode
-                elif event.key == pygame.K_TAB:
-                    settings.chat_enabled = not settings.chat_enabled
-                elif event.key == pygame.K_e:
-                    P.use_ability()
-                elif event.key == pygame.K_x and P.inventory[P.picked]:
-                    P.gold += P.inventory[P.picked].upgrade_cost * 0.75
-                    P.inventory[P.picked] = False
-                elif event.key == pygame.K_q:
-                    for item_on_surface in items_on_surface:
-                        if item_on_surface.check_pick_up(P):
-                            if P.inventory[P.picked]:
-                                P.gold += P.inventory[P.picked].upgrade_cost * 0.6
-                            P.inventory[P.picked] = item.Item(item_on_surface.name, item_on_surface.lvl)
-                            items_on_surface.remove(item_on_surface)
-                            break
-                elif event.key == pygame.K_u and P.inventory[P.picked].lvl < 999 and P.inventory[
-                    P.picked].upgrade_cost \
-                        <= P.gold:
-                    P.gold -= P.inventory[P.picked].upgrade_cost
-                    P.inventory[P.picked].upgrade()
-                elif event.key == pygame.K_p:
-                    P.use_potion()
-                elif pygame.K_1 <= event.key <= pygame.K_6:
-                    P.picked = int(event.unicode) - 1
-                elif event.key == pygame.K_y:
-                    settings.camera_locked = not settings.camera_locked
-            elif event.type == pygame.MOUSEBUTTONDOWN and not settings.in_chat:
-                if event.button == 1 and P.inventory[P.picked]:
-                    P.attack(mouseX=m_x + camera_x, mouseY=m_y + camera_y)
-                elif event.button == 4:
-                    P.picked += 1
-                    P.picked %= 6
-                elif event.button == 5:
-                    P.picked -= 1
-                    P.picked %= 6
+        handle_input(P=P, settings=settings, start_time=start_time, camera_x=camera_x, camera_y=camera_y)
         if not settings.in_chat:
             update_player_direction_based_on_input(P2=P2, P=P)  # client
 
@@ -378,11 +380,11 @@ def main():
         # ------------------------------ display chat messages
         if settings.chat_enabled:
             height_of_msg = 10
-            for msg in chat_log:
+            for msg in settings.chat_log:
                 screen.blit(font.render(msg, True, (255, 255, 255)), (20, height_of_msg))
                 height_of_msg += 30
         # ------------------------------------
-        ##
+
         # ------------------------------------- show the typed message
         if settings.in_chat:
             if keys[pygame.K_BACKSPACE] and keys[pygame.K_LCTRL]:
