@@ -7,10 +7,12 @@ import pygame
 from Classes import player, mob, item, dropped_item, config
 
 pygame.init()
+
 screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 P_rect = pygame.Rect((0, 0), (66, 92))
 M_rect = pygame.Rect((0, 0), (88, 120))
 items_on_surface = []
+
 font = pygame.font.Font("freesansbold.ttf", 20)
 font_gold = pygame.font.Font("freesansbold.ttf", 100)
 
@@ -44,50 +46,6 @@ scout_img = pygame.image.load('../Assets/basics/Scout.png')
 
 def time_to_string(t):
     return f'{int(t // 3600)}:{int(t // 60)}:{int(t // 1)}'
-
-
-def identify_par_dmg(Ps: list, Ms: list):
-    """
-    :param Ps: A list of all the players that exist in the game
-    :param Ms: A list of the mobs
-    :return: new health for each entity
-    """
-    for M in Ms:
-        for S in M.projectiles:
-            for P in Ps:
-                P_rect.center = P.x, P.y
-                if P_rect.colliderect(S.hit_box) and not S.hit:
-                    M.projectiles.remove(S)
-                    S.hit = True
-                    P.health -= int(10 * P.income_dmg_multiplier)
-                    if P.health <= 0:
-                        Ps.remove(P)
-    for P1 in Ps:
-        for par in P1.projectiles:
-            for M in Ms:
-                if M.is_alive:
-                    M_rect.center = M.x, M.y
-                    if M_rect.colliderect(par.hit_box) and not par.hit:
-                        par.hit = True
-                        if par.speed != 1:
-                            P1.projectiles.remove(par)
-                        M.health -= par.dmg
-                        if M.health <= 0:
-                            P1.gold += M.worth
-                            M.death_time = time.time()
-                            M.is_alive = False
-                            items_on_surface.append(generate_drop(M.x, M.y, M.lvl))
-            for P2 in Ps:
-                if P2.nickname != P1.nickname:
-                    P2_rect = pygame.Rect((0, 0), (66, 92))
-                    P2_rect.center = P2.x, P2.y
-                    if P2_rect.colliderect(par.hit_box) and not par.hit:
-                        par.hit = True
-                        if par.speed != 1:
-                            P1.projectiles.remove(par)
-                        P2.health -= int(par.dmg * P2.income_dmg_multiplier)
-                        if P2.health <= 0:
-                            Ps.remove(P2)
 
 
 def show_entities_and_their_particles(entity, cx: int, ch: int):
@@ -223,49 +181,6 @@ def show_player_nickname(P: player.Player):
     screen.blit(name, name_rect)
 
 
-def generate_drop(x, y, average):
-    lvl = abs(random.randint(average - 11, average + 9)) + 1
-    name = random.randint(0, 2)
-    if name == 0:
-        return dropped_item.Dropped_item(x, y, lvl, 'bow', time.time())
-    elif name == 1:
-        return dropped_item.Dropped_item(x, y, lvl, 'dagger', time.time())
-    return dropped_item.Dropped_item(x, y, lvl, "cumball", time.time())
-
-
-def update_player_direction_based_on_input(P2: player.Player, P: player.Player):
-    keys = pygame.key.get_pressed()
-    P.dir_x = keys[pygame.K_d] - keys[pygame.K_a]
-    P.dir_y = keys[pygame.K_s] - keys[pygame.K_w]
-    P2.dir_x = keys[pygame.K_l] - keys[pygame.K_j]
-    P2.dir_y = keys[pygame.K_k] - keys[pygame.K_i]
-
-
-def move_all_players_and_their_particles(players: list):
-    for Pl in players:
-        Pl.move()
-        Pl.ability()
-        move_particles_for_entity(entity=Pl)
-
-
-def move_all_mobs_and_their_spear(mobs: list, players: list):
-    for Mo in mobs:
-        if Mo.is_alive:
-            Mo.move(players=players)
-        elif time.time() - Mo.death_time >= 7:
-            Mo.is_alive = True
-            Mo.x, Mo.y = Mo.home_x, Mo.home_y
-            Mo.health = 100 * Mo.lvl
-        move_particles_for_entity(entity=Mo)
-
-
-def move_particles_for_entity(entity):
-    for particle in entity.projectiles:
-        if particle.range <= 0:
-            entity.projectiles.remove(particle)
-        particle.move(entity.x, entity.y)
-
-
 def show_background(x, y, img):
     screen.blit(img, (0, 0), ((x % img.get_width(), y % img.get_height()), screen.get_size()))
     screen.blit(img, (img.get_width() - x % img.get_width(), img.get_height() - y % img.get_height()))
@@ -309,7 +224,7 @@ def handle_input(P: player.Player, settings: config.Config, start_time: float, c
                         P.inventory[P.picked] = item.Item(item_on_surface.name, item_on_surface.lvl)
                         items_on_surface.remove(item_on_surface)
                         break
-            elif event.key == pygame.K_u and P.inventory[P.picked].lvl < 999\
+            elif event.key == pygame.K_u and P.inventory[P.picked].lvl < 999 \
                     and P.inventory[P.picked].upgrade_cost <= P.gold:
                 P.gold -= P.inventory[P.picked].upgrade_cost
                 P.inventory[P.picked].upgrade()
@@ -331,9 +246,98 @@ def handle_input(P: player.Player, settings: config.Config, start_time: float, c
                 P.picked %= 6
 
 
+def update_player_direction_based_on_input(P2: player.Player, P: player.Player):
+    keys = pygame.key.get_pressed()
+    P.dir_x = keys[pygame.K_d] - keys[pygame.K_a]
+    P.dir_y = keys[pygame.K_s] - keys[pygame.K_w]
+    P2.dir_x = keys[pygame.K_l] - keys[pygame.K_j]
+    P2.dir_y = keys[pygame.K_k] - keys[pygame.K_i]
+
+
+######################################################################################################################
+def identify_par_dmg(Ps: list, Ms: list):
+    """
+    gotaa have a thread for itself and the list should be globals
+    :param Ps: A list of all the players that exist in the game
+    :param Ms: A list of the mobs
+    :return: new health for each entity
+    """
+    for M in Ms:
+        for S in M.projectiles:
+            for P in Ps:
+                P_rect.center = P.x, P.y
+                if P_rect.colliderect(S.hit_box) and not S.hit:
+                    M.projectiles.remove(S)
+                    S.hit = True
+                    P.health -= int(10 * P.income_dmg_multiplier)
+                    if P.health <= 0:
+                        Ps.remove(P)
+    for P1 in Ps:
+        for par in P1.projectiles:
+            for M in Ms:
+                if M.is_alive:
+                    M_rect.center = M.x, M.y
+                    if M_rect.colliderect(par.hit_box) and not par.hit:
+                        par.hit = True
+                        if par.speed != 1:
+                            P1.projectiles.remove(par)
+                        M.health -= par.dmg
+                        if M.health <= 0:
+                            P1.gold += M.worth
+                            M.death_time = time.time()
+                            M.is_alive = False
+                            items_on_surface.append(generate_drop(M.x, M.y, M.lvl))
+            for P2 in Ps:
+                if P2.nickname != P1.nickname:
+                    P2_rect = pygame.Rect((0, 0), (66, 92))
+                    P2_rect.center = P2.x, P2.y
+                    if P2_rect.colliderect(par.hit_box) and not par.hit:
+                        par.hit = True
+                        if par.speed != 1:
+                            P1.projectiles.remove(par)
+                        P2.health -= int(par.dmg * P2.income_dmg_multiplier)
+                        if P2.health <= 0:
+                            Ps.remove(P2)
+
+
+def generate_drop(x, y, average):
+    lvl = abs(random.randint(average - 11, average + 9)) + 1
+    name = random.randint(0, 2)
+    if name == 0:
+        return dropped_item.Dropped_item(x, y, lvl, 'bow', time.time())
+    elif name == 1:
+        return dropped_item.Dropped_item(x, y, lvl, 'dagger', time.time())
+    return dropped_item.Dropped_item(x, y, lvl, "cumball", time.time())
+
+
+def move_all_players_and_their_particles(players: list):  # this function gotta have a threadm list gotta be global
+    for Pl in players:
+        Pl.move()
+        Pl.ability()
+        move_particles_for_entity(entity=Pl)
+
+
+def move_all_mobs_and_their_spear(mobs: list, players: list):  # this function gotta have a thread, list gotta be global
+    for Mo in mobs:
+        if Mo.is_alive:
+            Mo.move(players=players)
+        elif time.time() - Mo.death_time >= 7:
+            Mo.is_alive = True
+            Mo.x, Mo.y = Mo.home_x, Mo.home_y
+            Mo.health = 100 * Mo.lvl
+        move_particles_for_entity(entity=Mo)
+
+
+def move_particles_for_entity(entity):
+    for particle in entity.projectiles:
+        if particle.range <= 0:
+            entity.projectiles.remove(particle)
+        particle.move(entity.x, entity.y)
+
+
 def main():
     settings = config.Config()
-    P = player.Player(nickname="Hunnydrips", key=0, ip=0, Class='Scout')
+    P = player.Player(nickname="Hunnydrips", key=0, ip=0, Class='Tank')
     camera_x = 0
     camera_y = 0
     map_img = pygame.image.load('../Assets/basics/ground2.jpg')
