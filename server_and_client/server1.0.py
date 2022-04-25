@@ -211,6 +211,16 @@ def recv(start_time):
             elif message.startswith('ability'):
                 # packet format is "ability"
                 P_for_changes.use_ability()
+            elif message.startswith('still-alive'):
+                P_for_changes.last_time_send_connection_alive_packet = time.time()
+
+
+def check_players_that_lost_connection():
+    disconnect_time = 20
+    while 1:
+        for P in players:
+            if time.time() - P.last_time_send_connection_alive_packet > disconnect_time:
+                players.remove(P)
 
 
 def create_mobs():
@@ -239,9 +249,10 @@ def main():
     start_time = time.time()
     create_mobs()
     threading.Thread(target=recv, args=(start_time,), daemon=True).start()
-    threading.Thread(target=move_all_mobs_and_their_spear(), daemon=True).start()
-    threading.Thread(target=move_all_players_and_their_particles(), daemon=True).start()
-    threading.Thread(target=identify_par_dmg(), daemon=True)
+    threading.Thread(target=move_all_mobs_and_their_spear, daemon=True).start()
+    threading.Thread(target=move_all_players_and_their_particles, daemon=True).start()
+    threading.Thread(target=identify_par_dmg, daemon=True).start()
+    threading.Thread(target=check_players_that_lost_connection, daemon=True).start()
     # todo:
     #   data base
     #   feel in the blank functions
