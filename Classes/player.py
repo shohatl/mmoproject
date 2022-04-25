@@ -15,6 +15,7 @@ class Player:
         self.Class = Class
         self.last_time_used_ability = time.time()
         self.is_ability_active = False
+        self.last_time_send_connection_alive_packet = time.time()
         self.last_time_moved = 0
         self.last_time_attack = 0
         self.last_time_send_connection_alive_packet = time.time()
