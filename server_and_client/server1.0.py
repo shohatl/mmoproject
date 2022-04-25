@@ -14,7 +14,7 @@ players = []
 chat_list = []
 
 udp_server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-udp_server_socket.bind(('0.0.0.0', 69420))
+udp_server_socket.bind(('0.0.0.0', 42069))
 
 
 def time_to_string(t):
@@ -23,7 +23,7 @@ def time_to_string(t):
 
 def identify_par_dmg():
     """
-    gotaa have a thread for itself and the list should be globals
+    got to have a thread for itself and the list should be globals
     :return: new health for each entity
     """
     while True:
@@ -124,7 +124,7 @@ def recv(start_time):
             message_for_new_client = encryption.encrypt_rsa(msg=custom_key, key=key_rsa)
             udp_server_socket.sendto(message_for_new_client, ip)
         else:
-            # here it is a client that was conecnted before so all the packets are encrypted
+            # here it is a client that was connected before so all the packets are encrypted
             key = ''
             P_for_changes = player.Player(0, 0, 0, 0)
             for P in players:
@@ -134,7 +134,7 @@ def recv(start_time):
                     break
             message = encryption.decrypt(msg=message, key=key)
 
-            # here should be Guy's loop like while message: and shit
+            # here should be Guy's loop like while message:
 
             if message.startswith('sign_up'):
                 # packet format is sign_upNickName,UserNameHash,PasswordHash,Class
@@ -150,9 +150,9 @@ def recv(start_time):
                 # if the data is valid
                 if data_is_valid(user_name_hash, data_is_valid(username=user_name_hash, password=password_hash)):
                     nick_name = 'should be loaded from data base'
-                    chosen_class = 'Tank'  # should be loaded from data base
-                    x = 0  # should be loaded from data base
-                    y = 0  # should be loaded from data base
+                    chosen_class = 'Tank'  # should be loaded from database
+                    x = 0  # should be loaded from database
+                    y = 0  # should be loaded from database
                     inventory = []  # should be loaded from data bse
                     P_for_changes.Class = chosen_class
                     P_for_changes.nickname = nick_name
@@ -230,7 +230,9 @@ def create_mobs():
 
 
 def read_from_data_base():
-    pass
+    # database should look like player: nickname,username,password,x,y,inventory,Class,gold,health
+    # return all of this as a list
+    return ''
 
 
 def write_to_data_base():
@@ -242,7 +244,10 @@ def send_data():
 
 
 def data_is_valid(username, password):
-    return True
+    data = read_from_data_base()
+    if username in data and password in data:
+        return data[data.index(username) + 1] == password
+    return False
 
 
 def main():
@@ -253,6 +258,8 @@ def main():
     threading.Thread(target=move_all_players_and_their_particles, daemon=True).start()
     threading.Thread(target=identify_par_dmg, daemon=True).start()
     threading.Thread(target=check_players_that_lost_connection, daemon=True).start()
+    while 1:
+        pass
     # todo:
     #   data base
     #   feel in the blank functions
