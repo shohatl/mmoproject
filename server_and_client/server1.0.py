@@ -3,7 +3,7 @@ import socket
 import time
 import threading
 import random
-from Classes import dropped_item, player, mob, encryption
+from Classes import dropped_item, player, mob, encryption, item
 
 pygame.init()
 P_rect = pygame.Rect((0, 0), (66, 92))
@@ -15,6 +15,10 @@ chat_list = []
 
 udp_server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 udp_server_socket.bind(('0.0.0.0', 69420))
+
+
+def time_to_string(t):
+    return f'{int(t // 3600)}:{int(t // 60)}:{int(t // 1)}'
 
 
 def identify_par_dmg():
@@ -144,14 +148,20 @@ def recv(start_time):
                 message = message[:6]
                 user_name_hash, password_hash = message.split(',')
                 # if the data is valid
-                if True:
+                if data_is_valid(user_name_hash, data_is_valid(username=user_name_hash, password=password_hash)):
                     nick_name = 'should be loaded from data base'
                     chosen_class = 'Tank'  # should be loaded from data base
+                    x = 0  # should be loaded from data base
+                    y = 0  # should be loaded from data base
+                    inventory = []  # should be loaded from data bse
                     P_for_changes.Class = chosen_class
                     P_for_changes.nickname = nick_name
+                    P_for_changes.x = x
+                    P_for_changes.y = y
+                    P_for_changes.inventory = inventory
                 else:
                     # send log in deny
-                    print('deny acsses')
+                    print('deny access')
                 # send log in accept
             elif message.startswith('move'):
                 # packet format is move-1.-1
@@ -219,6 +229,10 @@ def write_to_data_base():
 
 def send_data():
     pass
+
+
+def data_is_valid(username, password):
+    return True
 
 
 def main():
