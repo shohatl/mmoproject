@@ -3,7 +3,7 @@ import socket
 import time
 import threading
 import random
-from Classes import dropped_item, player, mob, encryption, item
+from Classes import dropped_item, player, mob, encryption, item, packet_builder
 
 pygame.init()
 P_rect = pygame.Rect((0, 0), (66, 92))
@@ -106,12 +106,12 @@ def move_particles_for_entity(entity):
         particle.move(entity.x, entity.y)
 
 
-def recv(start_time):
+def receive_packet_and_handle_it(start_time):
     while True:
         message, ip = udp_server_socket.recvfrom(1024)
         message = message.decode()
         if message.startswith('hi'):
-            threading.Thread(target=recv, args=(start_time,), daemon=True).start()
+            threading.Thread(target=receive_packet_and_handle_it, args=(start_time,), daemon=True).start()
             # the packet look like - hiN.E
             message = message[2:]
             n, e = message.split('.')
@@ -240,7 +240,14 @@ def write_to_data_base():
 
 
 def send_data():
-    pass
+    while 1:
+        for P in players:
+            packet = packet_builder.buildAllServer(player=P, chatMsg='')
+            encrypted_packet = encryption.encrypt(msg=packet, key=P.key)
+            udp_server_socket.sendto(encrypted_packet.encode(), P.ip)
+            # Lidor gotta do it
+            # build packet for player
+            # send the packet
 
 
 def data_is_valid(username, password):
@@ -253,7 +260,7 @@ def data_is_valid(username, password):
 def main():
     start_time = time.time()
     create_mobs()
-    threading.Thread(target=recv, args=(start_time,), daemon=True).start()
+    threading.Thread(target=receive_packet_and_handle_it, args=(start_time,), daemon=True).start()
     threading.Thread(target=move_all_mobs_and_their_spear, daemon=True).start()
     threading.Thread(target=move_all_players_and_their_particles, daemon=True).start()
     threading.Thread(target=identify_par_dmg, daemon=True).start()
