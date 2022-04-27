@@ -375,7 +375,7 @@ def main():
                     screen.blit(img, (416 + x, 405))
                 x += 20
 
-            pass
+            pass#
         pygame.display.update()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
