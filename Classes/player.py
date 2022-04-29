@@ -18,6 +18,7 @@ class Player:
         self.last_time_send_connection_alive_packet = time.time()
         self.last_time_moved = 0
         self.last_time_attack = 0
+        self.last_time_send_connection_alive_packet = time.time()
         self.speed = 8
         self.income_dmg_multiplier = 1
         self.other_players_list = []
