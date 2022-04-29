@@ -125,18 +125,17 @@ def receive_packet_and_handle_it(start_time):
             udp_server_socket.sendto(message_for_new_client, ip)
         else:
             # here it is a client that was connected before so all the packets are encrypted
+            key = ''
+            P_for_changes = player.Player(0, 0, 0, 0)
+            for P in players:
+                if P.ip == ip:
+                    key = P.key
+                    P_for_changes = P
+                    break
+            message = encryption.decrypt(msg=message, key=key)
+
+            # here should be Guy's loop like while message:
             while message:
-                key = ''
-                P_for_changes = player.Player(0, 0, 0, 0)
-                for P in players:
-                    if P.ip == ip:
-                        key = P.key
-                        P_for_changes = P
-                        break
-                message = encryption.decrypt(msg=message, key=key)
-
-                # here should be Guy's loop like while message:
-
                 if message.startswith('sign_up'):
                     # packet format is sign_upNickName,UserNameHash,PasswordHash,Class
                     sign_up_data = message[:7]
