@@ -189,6 +189,7 @@ def show_background(x, y, img):
 
 
 def handle_input(P: player.Player, settings: config.Config, start_time: float, camera_x: int, camera_y: int):
+    keys = pygame.key.get_pressed()
     for event in pygame.event.get():
         if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
             pygame.quit()
@@ -231,7 +232,11 @@ def handle_input(P: player.Player, settings: config.Config, start_time: float, c
             elif event.key == pygame.K_p:
                 P.use_potion()
             elif pygame.K_1 <= event.key <= pygame.K_6:
-                P.picked = int(event.unicode) - 1
+                if not keys[pygame.K_i]:
+                    P.picked = int(event.unicode) - 1
+                else:
+                    P.inventory[P.picked], P.inventory[int(event.unicode) - 1] = P.inventory[int(event.unicode) - 1], \
+                                                                                 P.inventory[P.picked]
             elif event.key == pygame.K_y:
                 settings.camera_locked = not settings.camera_locked
         elif event.type == pygame.MOUSEBUTTONDOWN and not settings.in_chat:
