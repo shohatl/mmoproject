@@ -128,7 +128,7 @@ def receive_packet_and_handle_it(start_time):
             key = ''
             P_for_changes = player.Player(0, 0, 0, 0)
             for P in players:
-                if P.ip == ip:
+                if P.ip == ip:#
                     key = P.key
                     P_for_changes = P
                     break
