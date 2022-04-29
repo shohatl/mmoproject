@@ -1,123 +1,110 @@
-def buildLocP(x, y):
-    locP = f'$LOC{x}.{y}'
-    locP = str(len(locP)) + locP
-    return locP
+def build_location_packet(x, y):
+    packet = f'$LOC{x}.{y}'
+    packet = str(len(packet)) + packet
+    return packet
 
 
-def buildMoveP(dirX, dirY):
-    moveP = f'$MOVE{dirX}.{dirY}'
-    moveP = str(len(moveP)) + moveP
-    return moveP
+def build_move_packet(dir_x, dir_y):
+    packet = f'$MOVE{dir_x}.{dir_y}'
+    packet = str(len(packet)) + packet
+    return packet
 
 
-def buildOtherPP(otherP):
-    if otherP:
-        otherPP = '$OTHERP'
-        for player in otherP:
-            otherPP += f'{player.x}.{player.y}@'
-        otherPP = otherPP[:-1]
-        otherPP = str(len(otherPP)) + otherPP
-        return otherPP
+def build_other_player_packet(other_players):
+    if other_players:
+        packet = '$OTHERP'
+        for player in other_players:
+            packet += f'{player.x}.{player.y}@'
+        packet = packet[:-1]
+        packet = str(len(packet)) + packet
+        return packet
     return ''
 
 
-def buildMobsP(mobs):
+def build_mob_packet(mobs):
     if mobs:
-        mobP = '$MOBS'
+        packet = '$MOBS'
         for mob in mobs:
-            mobP += f'{mob.x}.{mob.y}.{mob.is_melee}@'
-        mobP = mobP[:-1]
-        mobP = str(len(mobP)) + mobP
-        return mobP
+            packet += f'{mob.x}.{mob.y}.{mob.is_melee}@'
+        packet = packet[:-1]
+        packet = str(len(packet)) + packet
+        return packet
     return ''
 
 
-def buildParticlesP(particles):
+def build_particles_packet(particles):
     if particles:
-        particleP = f'$PARTICLES'
+        packet = f'$PARTICLES'
         for particle in particles:
-            particleP += f'{particle.x}.{particle.y}.{particle.angle}.{particle.name}@'
-        particleP = particleP[:-1]
-        particleP = str(len(particleP)) + particleP
-        return particleP
+            packet += f'{particle.x}.{particle.y}.{particle.angle}.{particle.name}@'
+        packet = packet[:-1]
+        packet = str(len(packet)) + packet
+        return packet
     return ''
 
 
-def buildSpearsP(spears):
+def build_spears_packet(spears):
     if spears:
-        spearP = '$SPEARS'
+        packet = '$SPEARS'
         for spear in spears:
-            spearP += f'{spear.x}.{spear.y}.{spear.angle}@'
-        spearP = spearP[:-9]
-        spearP = str(len(spearP)) + spearP
-        return spearP
+            packet += f'{spear.x}.{spear.y}.{spear.angle}@'
+        packet = packet[:-9]
+        packet = str(len(packet)) + packet
+        return packet
     return ''
 
 
-def buildAttackP(mouseX, mouseY):
-    attackP = f'$ATTACK{mouseX}.{mouseY}'
-    attackP = str(len(attackP)) + attackP
-    return attackP
-
-
-def buildInventoryP(inv):
-    inventoryP = '$INV'
-    for i, slot in enumerate(inv):
-        inventoryP += f'{slot}@'
-    inventoryP = inventoryP[:-1]
-    inventoryP = str(len(inventoryP)) + inventoryP
-    return inventoryP
-
-
-def buildSlotP(slot):
-    slotP = f'$SLOT{slot}'
-    slotP = str(len(slotP)) + slotP
-    return slotP
-
-
-def buildGoldP(gold):
-    goldP = f'$GOLD{gold}'
-    goldP = str(len(gold)) + goldP
-    return goldP
-
-
-def buildChatP(chatMsg):
-    chatP = f'$CHAT' + chatMsg
-    chatP = str(len(chatP)) + chatP
-    return chatP
-
-
-def buildAllServer(player, chatMsg):
-    packet = buildLocP(player.x, player.y)
-    packet += buildOtherPP(player.other_players_list)
-    packet += buildMobsP(player.mobs_in_range)
-    packet += buildParticlesP(player.particles_in_range)
-    packet += buildSpearsP(player.spears_in_range)
-    packet += buildInventoryP(player.inventory)
-    packet += buildGoldP(player.gold)
-
-    if chatMsg:
-        packet += buildChatP(chatMsg)
-
-    return packet
-
-#mark is gay
-def buildAllClientWithAttack(player, mouseX, mouseY, chatMsg):
-    packet = buildMoveP(player.x, player.y)
-    packet += buildAttackP(mouseX, mouseY)
-    packet += buildSlotP(player.picked)
-
-    if chatMsg:
-        packet += buildChatP(chatMsg)
-
+def build_attack_packet(mouse_x, mouse_y):
+    packet = f'$ATTACK{mouse_x}.{mouse_y}'
+    packet = str(len(packet)) + packet
     return packet
 
 
-def buildAllClient(player, chatMsg):
-    packet = buildMoveP(player.x, player.y)
-    packet += buildSlotP(player.picked)
+def build_inventory_packet(inventory):
+    packet = '$INV'
+    for i, slot in enumerate(inventory):
+        packet += f'{slot}@'
+    packet = packet[:-1]
+    packet = str(len(packet)) + packet
+    return packet
 
-    if chatMsg:
-        packet += buildChatP(chatMsg)
 
+def build_slot_packet(slot):
+    packet = f'$SLOT{slot}'
+    packet = str(len(packet)) + packet
+    return packet
+
+
+def build_gold_packet(gold):
+    packet = f'$GOLD{gold}'
+    packet = str(len(gold)) + packet
+    return packet
+
+
+def build_chat_packet(chat_message):
+    packet = f'$CHAT' + chat_message
+    packet = str(len(packet)) + packet
+    return packet
+
+
+def build_all_server(player, chat_message):
+    packet = build_location_packet(x=player.x, y=player.y)
+    packet += build_other_player_packet(other_players=player.other_players_list)
+    packet += build_mob_packet(mobs=player.mobs_in_range)
+    packet += build_particles_packet(particles=player.particles_in_range)
+    packet += build_spears_packet(spears=player.spears_in_range)
+    packet += build_inventory_packet(inventory=player.inventory)
+    packet += build_gold_packet(gold=player.gold)
+    if chat_message:
+        packet += build_chat_packet(chat_message=chat_message)
+    return packet
+
+
+def build_all_client(player, mouse_x, mouse_y, chat_message):
+    packet = build_move_packet(dir_x=player.x, dir_y=player.y)
+    packet += build_slot_packet(slot=player.picked)
+    if mouse_x and mouse_y:
+        packet += build_attack_packet(mouse_x=mouse_x, mouse_y=mouse_y)
+    if chat_message:
+        packet += build_chat_packet(chat_message=chat_message)
     return packet
