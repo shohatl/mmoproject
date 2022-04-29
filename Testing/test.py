@@ -332,6 +332,12 @@ def handle_input(P: player.Player, settings: config.Config, start_time: float, c
 
 
 def main():
+    ar = [1,2,3,4,5,6,7,8,9]
+    print(ar)
+    ar = ar[3:]
+    print(ar)
+
+
     settings = config.Config()
     P = player.Player(nickname="Hunnydrips", key=0, ip=0, Class='Scout')
     camera_x = 0

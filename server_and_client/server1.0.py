@@ -133,9 +133,11 @@ def receive_packet_and_handle_it(start_time):
                     P_for_changes = P
                     break
             message = encryption.decrypt(msg=message, key=key)
-
-            # here should be Guy's loop like while message:
-            while message:
+            syn = message[:3]
+            message = message[3:]
+            if syn == P_for_changes.expected_syn:
+                P_for_changes.expected_syn += 1
+                # here should be Guy's loop like while message:
                 if message.startswith('sign_up'):
                     # packet format is sign_upNickName,UserNameHash,PasswordHash,Class
                     sign_up_data = message[:7]
@@ -148,17 +150,18 @@ def receive_packet_and_handle_it(start_time):
                     log_in_data = message[:6]
                     user_name_hash, password_hash = log_in_data.split(',')
                     # if the data is valid
-                    if data_is_valid(user_name_hash, data_is_valid(username=user_name_hash, password=password_hash)):
-                        nick_name = 'should be loaded from data base'
+                    if data_is_valid(user_name_hash,
+                                     data_is_valid(username=user_name_hash, password=password_hash)):
+                        nick_name = 'lidor'
                         chosen_class = 'Tank'  # should be loaded from database
                         x = 0  # should be loaded from database
                         y = 0  # should be loaded from database
-                        inventory = []  # should be loaded from data bse
+                        inventory = [False, False, False, False, False, False]  # should be loaded from data bse
                         P_for_changes.Class = chosen_class
                         P_for_changes.nickname = nick_name
                         P_for_changes.x = x
                         P_for_changes.y = y
-                        P_for_changes.inventory = inventory
+                        # P_for_changes.inventory = inventory
                     else:
                         # send log in deny
                         print('deny access')
@@ -173,7 +176,8 @@ def receive_packet_and_handle_it(start_time):
                     # packet format is attackX.Y
                     attack_data = message[6:]
                     x_target, y_target = attack_data.split('.')
-                    P_for_changes.attack(mouseX=int(x_target), mouseY=int(y_target))  # can add argument of picked here
+                    P_for_changes.attack(mouseX=int(x_target),
+                                         mouseY=int(y_target))  # can add argument of picked here
                 elif message.startswith('pick'):
                     # packet format is pickSlot
                     pick_data = message[4:]
@@ -192,7 +196,8 @@ def receive_packet_and_handle_it(start_time):
                     for item_on_surface in items_on_surface:
                         if item_on_surface.check_pick_up(P_for_changes):
                             if P_for_changes.inventory[P_for_changes.picked]:
-                                P_for_changes.gold += P_for_changes.inventory[P_for_changes.picked].upgrade_cost * 0.6
+                                P_for_changes.gold += P_for_changes.inventory[
+                                                          P_for_changes.picked].upgrade_cost * 0.6
                             P_for_changes.inventory[P_for_changes.picked] = item.Item(item_on_surface.name,
                                                                                       item_on_surface.lvl)
                             items_on_surface.remove(item_on_surface)
@@ -237,7 +242,7 @@ def create_mobs():
 def read_from_data_base():
     # database should look like player: nickname,username,password,x,y,inventory,Class,gold,health
     # return all of this as a list
-    return ''
+    return ['a', 'b']
 
 
 def write_to_data_base():
