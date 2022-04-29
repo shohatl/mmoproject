@@ -8,7 +8,7 @@ from Classes import dropped_item, player, mob, encryption, item, packet_builder
 pygame.init()
 P_rect = pygame.Rect((0, 0), (66, 92))
 M_rect = pygame.Rect((0, 0), (88, 120))
-items_on_surface = []
+items_on_surface = []#
 mobs = []
 players = []
 chat_list = []
