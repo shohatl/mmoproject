@@ -213,6 +213,10 @@ def receive_packet_and_handle_it(start_time):
                 P_for_changes.use_ability()
             elif message.startswith('still-alive'):
                 P_for_changes.last_time_send_connection_alive_packet = time.time()
+            elif message.startswith('swap'):
+                # packet format is "swap0
+                P_for_changes.inventory[P_for_changes.picked], P_for_changes.inventory[int(message[4])] = \
+                    P_for_changes.inventory[int(message[4])], P_for_changes.inventory[P_for_changes.picked]
 
 
 def check_players_that_lost_connection():
