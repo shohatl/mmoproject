@@ -8,7 +8,7 @@ from Classes import dropped_item, player, mob, encryption, item, packet_builder
 pygame.init()
 P_rect = pygame.Rect((0, 0), (66, 92))
 M_rect = pygame.Rect((0, 0), (88, 120))
-items_on_surface = []#
+items_on_surface = []  #
 mobs = []
 players = []
 chat_list = []
@@ -128,7 +128,7 @@ def receive_packet_and_handle_it(start_time):
             key = ''
             P_for_changes = player.Player(0, 0, 0, 0)
             for P in players:
-                if P.ip == ip:#
+                if P.ip == ip:  #
                     key = P.key
                     P_for_changes = P
                     break
@@ -161,6 +161,7 @@ def receive_packet_and_handle_it(start_time):
                         P_for_changes.nickname = nick_name
                         P_for_changes.x = x
                         P_for_changes.y = y
+                        # send log in accept
                         # P_for_changes.inventory = inventory
                     else:
                         # send log in deny
@@ -179,7 +180,7 @@ def receive_packet_and_handle_it(start_time):
                     P_for_changes.attack(mouseX=int(x_target),
                                          mouseY=int(y_target))  # can add argument of picked here
                 elif message.startswith('pick'):
-                    # packet format is pickSlot
+                    # packet format is pick5
                     pick_data = message[4:]
                     P_for_changes.picked = int(pick_data)
                 elif message.startswith('sell') and P_for_changes.inventory[P_for_changes.picked]:
@@ -191,7 +192,7 @@ def receive_packet_and_handle_it(start_time):
                     chat_data = message[4:]
                     chat_list.append(
                         f'({P_for_changes.nickname}): {chat_data} [{time_to_string(time.time() - start_time)}]')
-                elif message.startswith('pickup'):
+                elif message.startswith('pick-up'):
                     # packet format is "pickup"
                     for item_on_surface in items_on_surface:
                         if item_on_surface.check_pick_up(P_for_changes):
@@ -223,6 +224,10 @@ def receive_packet_and_handle_it(start_time):
                     # packet format is "swap0
                     P_for_changes.inventory[P_for_changes.picked], P_for_changes.inventory[int(message[4])] = \
                         P_for_changes.inventory[int(message[4])], P_for_changes.inventory[P_for_changes.picked]
+                elif message.startswith('scroll'):
+                    scroll_data = int(message[6:])
+                    P_for_changes.picked += scroll_data
+                    P_for_changes.picked %= 6
 
 
 def check_players_that_lost_connection():
