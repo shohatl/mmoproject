@@ -158,7 +158,7 @@ def receive_packet_and_handle_it(start_time):
                     health = 69  # should be loaded from database
                     x = 120  # should be loaded from database
                     y = 100  # should be loaded from database
-                    gold = 100
+                    gold = 100#
                     inventory = [False, False, False, False, False, False]  # should be loaded from data bse
                     P_for_changes.health = health
                     P_for_changes.Class = chosen_class
