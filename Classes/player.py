@@ -1,3 +1,4 @@
+import secrets
 import time
 from Classes import item, particle
 
@@ -18,6 +19,7 @@ class Player:
         self.last_time_send_connection_alive_packet = time.time()
         self.last_time_moved = 0
         self.last_time_attack = 0
+        self.last_time_send_connection_alive_packet = time.time()
         self.speed = 8
         self.income_dmg_multiplier = 1
         self.other_players_list = []
@@ -33,6 +35,7 @@ class Player:
         self.nickname = nickname
         self.ip = ip
         self.key = key
+        self.expected_syn = secrets.randbelow(1000)
 
     def check_collision(self, map):
         return int(map[self.y // 64][self.x // 64]) in collide_list
