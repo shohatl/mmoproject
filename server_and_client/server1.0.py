@@ -3,7 +3,7 @@ import socket
 import time
 import threading
 import random
-from Classes import dropped_item, player, mob, encryption, item, packet_builder
+from Classes import dropped_item, player, mob, encryption, item
 
 pygame.init()
 P_rect = pygame.Rect((0, 0), (66, 92))
@@ -84,6 +84,9 @@ def move_all_players_and_their_particles():  # this function gotta have a thread
             if Pl.Class != 'tmp':
                 Pl.move()
                 Pl.ability()
+                packet = f'loc{Pl.x}.{Pl.y}'
+                packet = encryption.encrypt(msg=packet, key=Pl.key)
+                udp_server_socket.sendto(packet.encode(), Pl.ip)
                 move_particles_for_entity(entity=Pl)
 
 
@@ -125,109 +128,134 @@ def receive_packet_and_handle_it(start_time):
             udp_server_socket.sendto(message_for_new_client, ip)
         else:
             # here it is a client that was connected before so all the packets are encrypted
-            key = ''
             P_for_changes = player.Player(0, 0, 0, 0)
             for P in players:
                 if P.ip == ip:  #
-                    key = P.key
                     P_for_changes = P
                     break
-            message = encryption.decrypt(msg=message, key=key)
-            syn = message[:3]
-            message = message[3:]
-            if syn == P_for_changes.expected_syn:
-                P_for_changes.expected_syn += 1
-                # here should be Guy's loop like while message:
-                if message.startswith('sign_up'):
-                    # packet format is sign_upNickName,UserNameHash,PasswordHash,Class
-                    sign_up_data = message[:7]
-                    nick_name, user_name_hash, password_hash, chosen_class = sign_up_data.split(',')
-                    P_for_changes.nickname = nick_name
+            message = encryption.decrypt(msg=message, key=P_for_changes.key)
+            # here should be Guy's loop like while message:
+            if message.startswith('sign_up'):
+                # packet format is sign_upNickName,UserNameHash,PasswordHash,Class
+                sign_up_data = message[7:]
+                nick_name, user_name_hash, password_hash, chosen_class = sign_up_data.split(',')
+                P_for_changes.nickname = nick_name
+                P_for_changes.Class = chosen_class
+                # database.write info if username and nickname aren't taken
+            elif message.startswith('log_in'):
+                # packet format is log_inUserNameHash,PasswordHash
+                log_in_data = message[6:]
+                user_name_hash, password_hash = log_in_data.split(',')
+                print(user_name_hash)
+                print(password_hash)
+                # if the data is valid
+
+                # if data_is_valid(user_name_hash,
+                #                  data_is_valid(username=user_name_hash, password=password_hash)):
+                if True:
+                    nick_name = 'lidor'
+                    chosen_class = 'Scout'  # should be loaded from database
+                    health = 69  # should be loaded from database
+                    x = 120  # should be loaded from database
+                    y = 100  # should be loaded from database
+                    gold = 100#
+                    inventory = [False, False, False, False, False, False]  # should be loaded from data bse
+                    P_for_changes.health = health
                     P_for_changes.Class = chosen_class
-                    # database.write info if username and nickname aren't taken
-                elif message.startswith('log_in'):
-                    # packet format is log_inUserNameHash,PasswordHash
-                    log_in_data = message[:6]
-                    user_name_hash, password_hash = log_in_data.split(',')
-                    # if the data is valid
-                    if data_is_valid(user_name_hash,
-                                     data_is_valid(username=user_name_hash, password=password_hash)):
-                        nick_name = 'lidor'
-                        chosen_class = 'Tank'  # should be loaded from database
-                        x = 0  # should be loaded from database
-                        y = 0  # should be loaded from database
-                        inventory = [False, False, False, False, False, False]  # should be loaded from data bse
-                        P_for_changes.Class = chosen_class
-                        P_for_changes.nickname = nick_name
-                        P_for_changes.x = x
-                        P_for_changes.y = y
-                        # send log in accept
-                        # P_for_changes.inventory = inventory
-                    else:
-                        # send log in deny
-                        print('deny access')
+                    P_for_changes.nickname = nick_name
+                    P_for_changes.x = x
+                    P_for_changes.y = y
+                    P_for_changes.gold = gold
                     # send log in accept
-                elif message.startswith('move'):
-                    # packet format is move-1.-1
-                    move_data = message[4:]
-                    x_dir, y_dir = move_data.split('.')
-                    P_for_changes.dir_x = int(x_dir)
-                    P_for_changes.dir_y = int(y_dir)
-                elif message.startswith('attack'):
-                    # packet format is attackX.Y
-                    attack_data = message[6:]
-                    x_target, y_target = attack_data.split('.')
-                    P_for_changes.attack(mouseX=int(x_target),
-                                         mouseY=int(y_target))  # can add argument of picked here
-                elif message.startswith('pick'):
-                    # packet format is pick5
-                    pick_data = message[4:]
-                    P_for_changes.picked = int(pick_data)
-                elif message.startswith('sell') and P_for_changes.inventory[P_for_changes.picked]:
-                    # packet = sell
-                    P_for_changes.gold += P_for_changes.inventory[P_for_changes.picked].upgrade_cost * 0.75
-                    P_for_changes.inventory[P_for_changes.picked] = False
-                elif message.startswith('chat'):
-                    # packet = chat"message"
-                    chat_data = message[4:]
-                    chat_list.append(
-                        f'({P_for_changes.nickname}): {chat_data} [{time_to_string(time.time() - start_time)}]')
-                elif message.startswith('pick-up'):
-                    # packet format is "pickup"
-                    for item_on_surface in items_on_surface:
-                        if item_on_surface.check_pick_up(P_for_changes):
-                            if P_for_changes.inventory[P_for_changes.picked]:
-                                P_for_changes.gold += P_for_changes.inventory[
-                                                          P_for_changes.picked].upgrade_cost * 0.6
-                            P_for_changes.inventory[P_for_changes.picked] = item.Item(item_on_surface.name,
-                                                                                      item_on_surface.lvl)
-                            items_on_surface.remove(item_on_surface)
-                            break
-                elif message.startswith('upgrade') and P_for_changes.inventory[P_for_changes.picked].lvl < 999 and \
-                        P_for_changes.inventory[P_for_changes.picked].upgrade_cost <= P_for_changes.gold:
-                    # packet format is "upgrade"
-                    P_for_changes.gold -= P_for_changes.inventory[P_for_changes.picked].upgrade_cost
-                    P_for_changes.inventory[P_for_changes.picked].upgrade()
-                elif message.startswith('leave'):
-                    # packet format is "leave"
-                    players.remove(P_for_changes)
-                    return
-                elif message.startswith('potion'):
-                    # packet format is "potion"
-                    P_for_changes.use_potion()
-                elif message.startswith('ability'):
-                    # packet format is "ability"
-                    P_for_changes.use_ability()
-                elif message.startswith('still-alive'):
-                    P_for_changes.last_time_send_connection_alive_packet = time.time()
-                elif message.startswith('swap'):
-                    # packet format is "swap0
-                    P_for_changes.inventory[P_for_changes.picked], P_for_changes.inventory[int(message[4])] = \
-                        P_for_changes.inventory[int(message[4])], P_for_changes.inventory[P_for_changes.picked]
-                elif message.startswith('scroll'):
-                    scroll_data = int(message[6:])
-                    P_for_changes.picked += scroll_data
-                    P_for_changes.picked %= 6
+                    packet = f'log_in_accepted{x}' \
+                             f'.{y}.{chosen_class}.{nick_name}.{health}.{gold}.{P_for_changes.expected_syn}'
+                    packet = encryption.encrypt(packet, P_for_changes.key)
+                    udp_server_socket.sendto(packet.encode(), P_for_changes.ip)
+                    # P_for_changes.inventory = inventory
+                else:
+                    # send log in deny
+                    print('deny access')
+                    # send log in accept
+            else:
+                syn = int(message[:3])
+                message = message[3:]
+                if P_for_changes.expected_syn - 5 < syn < P_for_changes.expected_syn + 5:
+                    P_for_changes.expected_syn += 1
+                    if P_for_changes.expected_syn == 1000:
+                        P_for_changes.expected_syn = 100
+                    if message.startswith('move'):
+                        print('move received')
+                        # packet format is move-1.-1
+                        move_data = message[4:]
+                        x_dir, y_dir = move_data.split('.')
+                        P_for_changes.dir_x = int(x_dir)
+                        P_for_changes.dir_y = int(y_dir)
+                    elif message.startswith('attack'):
+                        print('attack received')
+                        # packet format is attackX.Y
+                        attack_data = message[6:]
+                        x_target, y_target = attack_data.split('.')
+                        P_for_changes.attack(mouseX=int(x_target),
+                                             mouseY=int(y_target))  # can add argument of picked here
+                    elif message.startswith('sell') and P_for_changes.inventory[P_for_changes.picked]:
+                        print('sell received')
+                        # packet = sell
+                        P_for_changes.gold += P_for_changes.inventory[P_for_changes.picked].upgrade_cost * 0.75
+                        P_for_changes.inventory[P_for_changes.picked] = False
+                    elif message.startswith('chat'):
+                        print('chat received')
+                        # packet = chat"message"
+                        chat_data = message[4:]
+                        chat_list.append(
+                            f'({P_for_changes.nickname}): {chat_data} [{time_to_string(time.time() - start_time)}]')
+                    elif message.startswith('pick-up'):
+                        print('pick-up received')
+                        # packet format is "pickup"
+                        for item_on_surface in items_on_surface:
+                            if item_on_surface.check_pick_up(P_for_changes):
+                                if P_for_changes.inventory[P_for_changes.picked]:
+                                    P_for_changes.gold += P_for_changes.inventory[
+                                                              P_for_changes.picked].upgrade_cost * 0.6
+                                P_for_changes.inventory[P_for_changes.picked] = item.Item(item_on_surface.name,
+                                                                                          item_on_surface.lvl)
+                                items_on_surface.remove(item_on_surface)
+                                break
+                    elif message.startswith('pick'):
+                        print('pick received')
+                        # packet format is pick5
+                        pick_data = message[4:]
+                        P_for_changes.picked = int(pick_data)
+                    elif message.startswith('upgrade') and P_for_changes.inventory[P_for_changes.picked].lvl < 999 and \
+                            P_for_changes.inventory[P_for_changes.picked].upgrade_cost <= P_for_changes.gold:
+                        # packet format is "upgrade"
+                        print('upgrade received')
+                        P_for_changes.gold -= P_for_changes.inventory[P_for_changes.picked].upgrade_cost
+                        P_for_changes.inventory[P_for_changes.picked].upgrade()
+                    elif message.startswith('leave'):
+                        print('leave received')
+                        # packet format is "leave"
+                        players.remove(P_for_changes)
+                        return
+                    elif message.startswith('potion'):
+                        print('potion received')
+                        # packet format is "potion"
+                        P_for_changes.use_potion()
+                    elif message.startswith('ability'):
+                        # packet format is "ability"
+                        print('using ablty')
+                        P_for_changes.use_ability()
+                    elif message.startswith('still-alive'):
+                        P_for_changes.last_time_send_connection_alive_packet = time.time()
+                    elif message.startswith('swap'):
+                        print('swap received')
+                        # packet format is "swap0
+                        P_for_changes.inventory[P_for_changes.picked], P_for_changes.inventory[int(message[4])] = \
+                            P_for_changes.inventory[int(message[4])], P_for_changes.inventory[P_for_changes.picked]
+                    elif message.startswith('scroll'):
+                        print('scroll received')
+                        scroll_data = int(message[6:])
+                        P_for_changes.picked += scroll_data
+                        P_for_changes.picked %= 6
 
 
 def check_players_that_lost_connection():
@@ -254,17 +282,6 @@ def write_to_data_base():
     pass
 
 
-def send_data():
-    while 1:
-        for P in players:
-            packet = packet_builder.buildAllServer(player=P, chatMsg='')
-            encrypted_packet = encryption.encrypt(msg=packet, key=P.key)
-            udp_server_socket.sendto(encrypted_packet.encode(), P.ip)
-            # Lidor gotta do it
-            # build packet for player
-            # send the packet
-
-
 def data_is_valid(username, password):
     data = read_from_data_base()
     if username in data and password in data:
@@ -276,10 +293,10 @@ def main():
     start_time = time.time()
     create_mobs()
     threading.Thread(target=receive_packet_and_handle_it, args=(start_time,), daemon=True).start()
-    threading.Thread(target=move_all_mobs_and_their_spear, daemon=True).start()
+    # threading.Thread(target=move_all_mobs_and_their_spear, daemon=True).start()
     threading.Thread(target=move_all_players_and_their_particles, daemon=True).start()
-    threading.Thread(target=identify_par_dmg, daemon=True).start()
-    threading.Thread(target=check_players_that_lost_connection, daemon=True).start()
+    # threading.Thread(target=identify_par_dmg, daemon=True).start()
+    # threading.Thread(target=check_players_that_lost_connection, daemon=True).start()
     while 1:
         pass
     # todo:
