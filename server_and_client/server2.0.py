@@ -111,6 +111,10 @@ def receive():
                     if current_player.is_ability_active:
                         packet = 'a'
                         udp_server_socket.sendto(packet.encode(), current_player.ip)
+            elif data.startswith('4'):
+                dir_of_scroll = int(data[1:])
+                current_player.picked += dir_of_scroll
+                current_player.picked %= 6
 
 
 def move_players():

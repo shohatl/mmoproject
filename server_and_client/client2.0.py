@@ -452,15 +452,26 @@ def main():
                 pygame.quit()
                 client_udp_socket.sendto("L".encode(), server_ip)
                 sys.exit()
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                mx, my = pygame.mouse.get_pos()
-                packet = f'A{mx + settings.camera_x}.{my + settings.camera_y}'
-                print(packet)
-                client_udp_socket.sendto(packet.encode(), server_ip)
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_e:
-                    packet = 'a'
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    mx, my = pygame.mouse.get_pos()
+                    packet = f'A{mx + settings.camera_x}.{my + settings.camera_y}'
+                    print(packet)
                     client_udp_socket.sendto(packet.encode(), server_ip)
+                elif event.button == 4:
+                    players[0].picked += 1
+                    players[0].picked %= 6
+                    packet = '41'
+                    client_udp_socket.sendto(packet.encode(), server_ip)
+                elif event.button == 5:
+                    players[0].picked -= 1
+                    players[0].picked %= 6
+                    packet = '4-1'
+                    client_udp_socket.sendto(packet.encode(), server_ip)
+            # elif event.type == pygame.KEYDOWN:
+            #     if event.key == pygame.K_e:
+            #         packet = 'a'
+            #         client_udp_socket.sendto(packet.encode(), server_ip)
         for p in players:
             show_entities_and_their_particles(p, settings.camera_x, settings.camera_y)
 

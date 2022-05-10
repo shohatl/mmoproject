@@ -54,7 +54,7 @@ class Player:
             self.y += self.speed * self.dir_y
             # if self.check_collision():
             #     self.y -= self.dir_y
-            return True
+            return self.dir_x != 0 or self.dir_y != 0
         return False
 
     def attack(self, mouseX, mouseY):
