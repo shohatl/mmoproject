@@ -204,12 +204,12 @@ def show_entities_and_their_particles(entity, camera_x: int, camera_y: int):
         S.image = pygame.transform.rotate(S.image, S.angle)
         S.hit_box = S.image.get_rect()
         S.hit_box.center = S.x, S.y
-
         S.hit_box.x -= camera_x
         S.hit_box.y -= camera_y
         screen.blit(S.image, S.hit_box)
         S.hit_box.x += camera_x
         S.hit_box.y += camera_y
+        entity.projectiles.remove(S)
     return
 
 
@@ -281,9 +281,8 @@ def receive():
                 par = particle.Particle(x=int(float(x)), y=int(float(y)), target_x=0, target_y=0, speed=0, range=0,
                                         dmg=0,
                                         name=name)
-                if par not in players[0].projectiles:
-                    players[0].projectiles.append(par)
-                    players[0].projectiles[-1].angle = float(angle)
+                players[0].projectiles.append(par)
+                players[0].projectiles[-1].angle = float(angle)
         elif data_from_server.startswith('7'):
             x, y, angle, name = data_from_server[1:].split('|')
             for par1 in local_player.projectiles:
