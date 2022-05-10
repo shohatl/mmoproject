@@ -147,7 +147,7 @@ def move_players():
                     udp_server_socket.sendto(packet.encode(), player1.ip)
             move_particles_for_entity(entity=player1)
 
-
+#
 def move_particles_for_entity(entity):
     for particle in entity.projectiles:
         screen_rect = pygame.Rect((0, 0), (1920, 1080))

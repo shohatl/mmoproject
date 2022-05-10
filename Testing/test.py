@@ -350,11 +350,12 @@ def main():
     P = player.Player(nickname="Hunnydrips", key=0, ip=0, Class='Tank')
     camera_x = 0
     camera_y = 0
-    map_img = pygame.image.load('../Assets/basics/ground2.jpg')
+    map_img = pygame.image.load('../Assets/basics/nazi_map.jpg')
+    map_img = pygame.transform.scale(map_img, screen.get_size())
     start_time = time.time()
     frame_counter = 0
     CL = pygame.time.Clock()
-    P2 = player.Player(nickname="Glidaria", key=0, ip=0, Class='Mage')
+    P2 = player.Player(nickname="Glidaria", key=0, ip=0, Class='Scout')
     M = mob.Mob(x=50, y=50, lvl=5)
     M2 = mob.Mob(x=500, y=50, lvl=3)
     players = [P, P2]

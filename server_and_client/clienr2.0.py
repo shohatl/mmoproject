@@ -457,7 +457,7 @@ def main():
         local_player.other_players_list = []
         cl.tick(60)
         pygame.display.update()
-
+#
 
 if __name__ == '__main__':
     main()

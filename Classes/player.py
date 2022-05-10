@@ -28,7 +28,8 @@ class Player:
         self.projectiles = []
         self.has_moved = False
         self.picked = 0
-        self.inventory = [item.Item("bow", 1), False, False, False, False, False]  # to add items later
+        self.inventory = [item.Item("bow", 1), item.Item("dagger", 66), item.Item("cumball", 420), False, False,
+                          False]  # to add items later
         self.gold = 0
         self.health = 100
         self.nickname = nickname
@@ -48,10 +49,12 @@ class Player:
             if self.dir_x:
                 self.last_dir = self.dir_x
             self.has_moved = True
-            self.x += self.speed * self.dir_x
+            if 0 < self.x + self.speed * self.dir_x < 1920 * 40:
+                self.x += self.speed * self.dir_x
             # if self.check_collision():
             #     self.x -= self.dir_x
-            self.y += self.speed * self.dir_y
+            if 0 < self.y + self.speed * self.dir_y < 1080 * 40:
+                self.y += self.speed * self.dir_y
             # if self.check_collision():
             #     self.y -= self.dir_y
             return True
