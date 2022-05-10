@@ -7,3 +7,4 @@ class Config:
         self.camera_locked = True
         self.chat_message = ''
         self.chat_log = []
+        self.syn = 0
