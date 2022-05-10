@@ -20,6 +20,7 @@ class Particle:
         self.image = pygame.transform.rotate(self.image, self.angle)
         self.hit_box = self.image.get_rect()
         self.hit_box.center = self.x, self.y
+        self.name = name
 
     def move(self, x, y):
         if time.time() - self.last_moved > 10 ** -3:

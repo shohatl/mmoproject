@@ -341,11 +341,10 @@ def move_particles_for_entity(entity):
 
 
 def main():
-    ar = [1,2,3,4,5,6,7,8,9]
+    ar = [1, 2, 3, 4, 5, 6, 7, 8, 9]
     print(ar)
     ar = ar[3:]
     print(ar)
-
 
     settings = config.Config()
     P = player.Player(nickname="Hunnydrips", key=0, ip=0, Class='Tank')

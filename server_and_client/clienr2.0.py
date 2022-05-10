@@ -1,7 +1,7 @@
 import socket
 import sys
 import threading
-from Classes import player, config, mob, encryption, item
+from Classes import player, config, mob, item, particle
 import pygame
 import time
 
@@ -9,9 +9,9 @@ client_udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server_ip = ('127.0.0.1', 42069)
 
 pygame.init()
-left_side_map = pygame.image.load('../Assets/basics/left.png')
-right_side_map = pygame.image.load('../Assets/basics/right.png')
-screen = pygame.display.set_mode((1920, 1080))
+left_side_map = pygame.image.load('../Assets/basics/ground2.jpg')
+right_side_map = pygame.image.load('../Assets/basics/ground2.jpg')
+screen = pygame.display.set_mode((1500, 800))
 local_player = player.Player('lidor', 0, 12345, 'Tank')
 
 P_rect = pygame.Rect((0, 0), (66, 92))
@@ -57,7 +57,8 @@ class Button:
         self.text = text
 
     def check_pressed(self):
-        if self.rect.collidepoint(pygame.mouse.get_pos()) and pygame.mouse.get_pressed()[0] == 1 and not self.is_pressed:
+        if self.rect.collidepoint(pygame.mouse.get_pos()) \
+                and pygame.mouse.get_pressed()[0] == 1 and not self.is_pressed:
             self.is_pressed = True
             return True
         if pygame.mouse.get_pressed()[0] == 0:
@@ -95,12 +96,12 @@ class TextField:
         if self.is_pressed:
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
-                    if 'Z' >= event.unicode >= '0' or 'z' >= event.unicode >= 'a' and len(self.current_text) <= 12:
+                    if ('Z' >= event.unicode >= '0' or 'z' >= event.unicode >= 'a') and len(self.current_text) <= 12:
                         self.current_text += event.unicode
             keys = pygame.key.get_pressed()
             if keys[pygame.K_BACKSPACE] and keys[pygame.K_LCTRL]:
                 self.current_text = ''
-            if keys[pygame.K_BACKSPACE] and self.current_text and time.time() - self.last_deleted > 0.2:
+            if keys[pygame.K_BACKSPACE] and self.current_text and time.time() - self.last_deleted > 0.1:
                 self.last_deleted = time.time()
                 self.current_text = self.current_text[:-1]
 
@@ -142,34 +143,34 @@ class RadioButton:
         screen.blit(txt, r)
 
 
-def show_player_health(P: player.Player, camera_x, camera_y):
-    pygame.draw.rect(screen, (0, 255, 0), ((P.x - 50 - camera_x, P.y - 70 - camera_y), (P.health, 10)))
-    pygame.draw.rect(screen, (255, 0, 0), ((P.x - 50 - camera_x + P.health, P.y - 70 - camera_y), (100 - P.health, 10)))
-    if P.income_dmg_multiplier == 0:
-        pygame.draw.rect(screen, (255, 255, 0), ((P.x - 50 - camera_x, P.y - 70 - camera_y), (P.health, 10)))
+def show_player_health(p: player.Player, camera_x, camera_y):
+    pygame.draw.rect(screen, (0, 255, 0), ((p.x - 50 - camera_x, p.y - 70 - camera_y), (p.health, 10)))
+    pygame.draw.rect(screen, (255, 0, 0), ((p.x - 50 - camera_x + p.health, p.y - 70 - camera_y), (100 - p.health, 10)))
+    if p.income_dmg_multiplier == 0:
+        pygame.draw.rect(screen, (255, 255, 0), ((p.x - 50 - camera_x, p.y - 70 - camera_y), (p.health, 10)))
     return
 
 
-def show_mob_health(M: mob.Mob):
-    pygame.draw.rect(screen, (0, 255, 0), ((M.x - 50, M.y - 75), (M.health // M.lvl, 10)))
-    pygame.draw.rect(screen, (255, 0, 0), ((M.x - 50 + M.health // M.lvl, M.y - 75), (100 - M.health // M.lvl, 10)))
+def show_mob_health(m: mob.Mob):
+    pygame.draw.rect(screen, (0, 255, 0), ((m.x - 50, m.y - 75), (m.health // m.lvl, 10)))
+    pygame.draw.rect(screen, (255, 0, 0), ((m.x - 50 + m.health // m.lvl, m.y - 75), (100 - m.health // m.lvl, 10)))
     return
 
 
-def show_mob_lvl(M: mob.Mob):
-    name = font.render(str(M.lvl), True, (0, 0, 0))
+def show_mob_lvl(m: mob.Mob):
+    name = font.render(str(m.lvl), True, (0, 0, 0))
     name_rect = name.get_rect()
-    name_rect.center = M.x, M.y
+    name_rect.center = m.x, m.y
     name_rect.y -= 70
     name_rect.x -= 70
     screen.blit(name, name_rect)
     return
 
 
-def show_player_nickname(P: player.Player, camera_x, camera_y):
-    name = font.render(P.nickname, True, (0, 0, 0))
+def show_player_nickname(p: player.Player, camera_x, camera_y):
+    name = font.render(p.nickname, True, (0, 0, 0))
     name_rect = name.get_rect()
-    name_rect.center = P.x - camera_x, P.y - camera_y
+    name_rect.center = p.x - camera_x, p.y - camera_y
     name_rect.y -= 90
     screen.blit(name, name_rect)
     return
@@ -185,8 +186,8 @@ def show_entities_and_their_particles(entity, camera_x: int, camera_y: int):
                 screen.blit(zombie_image, M_rect)
             else:
                 screen.blit(mob_image, M_rect)
-            show_mob_lvl(M=entity)
-            show_mob_health(M=entity)
+            show_mob_lvl(m=entity)
+            show_mob_health(m=entity)
     else:
         P_rect.center = entity_x, entity_y
         if entity.Class == 'Mage':
@@ -195,9 +196,14 @@ def show_entities_and_their_particles(entity, camera_x: int, camera_y: int):
             screen.blit(pygame.transform.flip(tank_img, entity.last_dir == -1, False), P_rect)
         elif entity.Class == 'Scout':
             screen.blit(pygame.transform.flip(scout_img, entity.last_dir == -1, False), P_rect)
-        show_player_health(P=entity, camera_x=camera_x, camera_y=camera_y)
-        show_player_nickname(P=entity, camera_x=camera_x, camera_y=camera_y)
+        show_player_health(p=entity, camera_x=camera_x, camera_y=camera_y)
+        show_player_nickname(p=entity, camera_x=camera_x, camera_y=camera_y)
     for S in entity.projectiles:
+        S.image = pygame.image.load(f'../Assets/weapons/{S.name}.png')
+        S.image = pygame.transform.rotate(S.image, S.angle)
+        S.hit_box = S.image.get_rect()
+        S.hit_box.center = S.x, S.y
+
         S.hit_box.x -= camera_x
         S.hit_box.y -= camera_y
         screen.blit(S.image, S.hit_box)
@@ -218,20 +224,68 @@ def movement():
     return
 
 
+def show_ability_cool_down(p: player.Player, camera_x: int, camera_y: int):
+    T = p.get_cd_left()
+    if not p.is_ability_active:
+        if T >= 10:
+            pygame.draw.rect(screen, (40, 30, 240),
+                             ((p.x - camera_x - 50, p.y - camera_y - 57), (100, 3)))
+        else:
+            T *= 10
+            T = int(T)
+            pygame.draw.rect(screen, (40, 160, 80),
+                             ((p.x - camera_x - 50, p.y - camera_y - 57), (T, 3)))
+    else:
+        if p.Class == 'Tank':
+            T *= 33
+            T = int(T)
+        elif p.Class == 'Scout':
+            T *= 50
+            T = int(T)
+        if T >= 100:
+            local_player.is_ability_active = False
+        pygame.draw.rect(screen, (40, 30, 240), ((p.x - camera_x - 50, p.y - camera_y - 57), (100 - T, 3)))
+
+
 def receive():
     while 1:
         data_from_server = client_udp_socket.recvfrom(1024)[0].decode()
         if data_from_server.startswith('L'):
             x, y = data_from_server[1:].split('.')
             local_player.x, local_player.y = int(x), int(y)
-        if data_from_server.startswith('o'):
-            for player1 in data_from_server[1:].split('@'):
-                nickname, x, y, Class, health = player1.split('.')
-                player2 = player.Player(nickname=nickname, Class=Class, ip=0, key=0)
-                player2.x = int(x)
-                player2.y = int(y)
-                player2.health = int(health)
-                show_entities_and_their_particles(entity=player2, camera_x=settings.camera_x, camera_y=settings.camera_y)
+        elif data_from_server.startswith('o'):
+            x, y, Class, nickname, health = data_from_server[1:].split('.')
+            player2 = player.Player(nickname=nickname, Class=Class, ip=0, key=0)
+            player2.x = int(x)
+            player2.y = int(y)
+            player2.health = int(health)
+            local_player.other_players_list.append(player2)
+        elif data_from_server.startswith('2'):
+            print(data_from_server[1:])
+            local_player.projectiles = []
+            for particle1 in data_from_server[1:].split('@'):
+                print(particle1)
+                x, y, angle, name = particle1.split('|')
+                local_player.projectiles.append(
+                    particle.Particle(x=int(float(x)), y=int(float(y)), target_x=0, target_y=0, speed=0, range=0, dmg=0,
+                                      name=name))
+                local_player.projectiles[-1].angle = float(angle)
+        elif data_from_server.startswith('7'):
+            x, y, angle, name = data_from_server[1:].split('|')
+            for par1 in local_player.projectiles:
+                if par1.angle == float(angle):
+                    local_player.projectiles.remove(par1)
+        elif data_from_server.startswith('H'):
+            pass
+        elif data_from_server.startswith('G'):
+            pass
+        elif data_from_server.startswith('I'):
+            pass
+        elif data_from_server.startswith('C'):
+            pass
+        elif data_from_server.startswith('a'):
+            local_player.is_ability_active = True
+            local_player.last_time_used_ability = time.time()
 
 
 def show_background(camera_x: int, camera_y: int):
@@ -245,13 +299,13 @@ def show_background(camera_x: int, camera_y: int):
     return
 
 
-def sign_up(nickname: str, username: str, password: str, Class: str):
-    client_udp_socket.sendto(f's{nickname}.{username}.{password}.{Class}'.encode(), server_ip)
+def sign_up(nickname: str, username: str, password: str, classa: str):
+    client_udp_socket.sendto(f's{nickname}.{username}.{password}.{classa}'.encode(), server_ip)
     data = client_udp_socket.recvfrom(1024)[0].decode()
     print(data)
     if data == "sallow":
         local_player.nickname = nickname
-        local_player.Class = Class
+        local_player.Class = classa
     return data == "sallow"
 
 
@@ -277,12 +331,12 @@ def login(username: str, password: str):
     return False
 
 
-def show_inventory(P: player.Player):
+def show_inventory(p: player.Player):
     slot_rect = pygame.Rect((screen.get_size()[0] - 490, screen.get_size()[1] - 90), (90, 90))
     in_hand_x, in_hand_y = 0, 0
-    for i, I in enumerate(P.inventory):
+    for i, I in enumerate(p.inventory):
         pygame.draw.rect(screen, (100, 100, 100), slot_rect, 10)
-        if i == P.picked:
+        if i == p.picked:
             in_hand_x = slot_rect.x
             in_hand_y = slot_rect.y
         if I:
@@ -329,7 +383,7 @@ def main():
                     for radio_button in radio_buttons:
                         if radio_button.is_pressed:
                             Class = radio_button.text
-                    if sign_up(username=text_fields[0].current_text, password=text_fields[1].current_text, Class=Class,
+                    if sign_up(username=text_fields[0].current_text, password=text_fields[1].current_text, classa=Class,
                                nickname=text_fields[2].current_text):
                         send_flag = False
         for text_field in text_fields:
@@ -368,11 +422,20 @@ def main():
         cl.tick(60)
         pygame.display.update()
     threading.Thread(target=receive, daemon=True).start()
+    threading.Thread(target=receive, daemon=True).start()
+    threading.Thread(target=receive, daemon=True).start()
+    threading.Thread(target=receive, daemon=True).start()
+    threading.Thread(target=receive, daemon=True).start()
+    threading.Thread(target=receive, daemon=True).start()
+    threading.Thread(target=receive, daemon=True).start()
     running = True
     while running:
+        screen.fill('red')
         movement()
-        settings.camera_x, settings.camera_y = local_player.x - screen.get_width() // 2, local_player.y - screen.get_height() // 2
+        settings.camera_x, settings.camera_y = \
+            local_player.x - screen.get_width() // 2, local_player.y - screen.get_height() // 2
         show_background(camera_x=settings.camera_x, camera_y=settings.camera_y)
+        show_ability_cool_down(local_player, settings.camera_x, settings.camera_y)
         show_inventory(local_player)
         show_entities_and_their_particles(camera_x=settings.camera_x, camera_y=settings.camera_y, entity=local_player)
         for event in pygame.event.get():
@@ -380,6 +443,18 @@ def main():
                 pygame.quit()
                 client_udp_socket.sendto("L".encode(), server_ip)
                 sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                mx, my = pygame.mouse.get_pos()
+                packet = f'A{mx + settings.camera_x}.{my + settings.camera_y}'
+                print(packet)
+                client_udp_socket.sendto(packet.encode(), server_ip)
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_e:
+                    packet = 'a'
+                    client_udp_socket.sendto(packet.encode(), server_ip)
+        for p in local_player.other_players_list:
+            show_entities_and_their_particles(p, settings.camera_x, settings.camera_y)
+        local_player.other_players_list = []
         cl.tick(60)
         pygame.display.update()
 
