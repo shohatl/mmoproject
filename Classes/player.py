@@ -8,8 +8,8 @@ collide_list = [4, 5, 22, 23, 26, 39, 40, 41, 43, 57, 59, 60, 75, 76, 77, 78, 92
 
 class Player:
     def __init__(self, nickname, ip, key, Class):
-        self.x = 100
-        self.y = 100
+        self.x = 1000
+        self.y = 1000
         self.dir_x = 0
         self.dir_y = 0
         self.last_dir = 1
@@ -20,6 +20,7 @@ class Player:
         self.last_time_moved = 0
         self.last_time_attack = 0
         self.speed = 8
+        self.username = ''
         self.income_dmg_multiplier = 1
         self.other_players_list = []
         self.mobs_on_screen = []
@@ -27,8 +28,7 @@ class Player:
         self.projectiles = []
         self.has_moved = False
         self.picked = 0
-        self.inventory = [item.Item("bow", 1), item.Item('cumball', 90), item.Item('cumball', 69), False, False,
-                          item.Item('dagger', 3)]  # to add items later
+        self.inventory = [item.Item("bow", 1), False, False, False, False, False]  # to add items later
         self.gold = 0
         self.health = 100
         self.nickname = nickname
@@ -43,7 +43,8 @@ class Player:
 
     def move(self):
         self.has_moved = False
-        if time.time() - self.last_time_moved > 10 ** -3:
+        if time.time() - self.last_time_moved > 10 ** -2:
+            self.last_time_moved = time.time()
             if self.dir_x:
                 self.last_dir = self.dir_x
             self.has_moved = True
@@ -53,6 +54,8 @@ class Player:
             self.y += self.speed * self.dir_y
             # if self.check_collision():
             #     self.y -= self.dir_y
+            return True
+        return False
 
     def attack(self, mouseX, mouseY):
         if time.time() - self.last_time_attack > self.inventory[self.picked].cool_down:
