@@ -157,17 +157,20 @@ def show_player_health(p: player.Player, camera_x, camera_y):
     return
 
 
-def show_mob_health(m: mob.Mob):
-    pygame.draw.rect(screen, (0, 255, 0), ((m.x - 50, m.y - 75), (m.health // m.lvl, 10)))
-    pygame.draw.rect(screen, (255, 0, 0), ((m.x - 50 + m.health // m.lvl, m.y - 75), (100 - m.health // m.lvl, 10)))
+def show_mob_health(m: mob.Mob, camera_x: int, camera_y: int):
+    pygame.draw.rect(screen, (0, 255, 0), ((m.x - 50 - camera_x, m.y - 75 - camera_y), (m.health // m.lvl, 10)))
+    pygame.draw.rect(screen, (255, 0, 0),
+                     ((m.x - 50 - camera_x + m.health // m.lvl, m.y - 75 - camera_y), (100 - m.health // m.lvl, 10)))
     return
 
 
-def show_mob_lvl(m: mob.Mob):
+def show_mob_lvl(m: mob.Mob, camera_x: int, camera_y: int):
     name = font.render(str(m.lvl), True, (0, 0, 0))
     name_rect = name.get_rect()
     name_rect.center = m.x, m.y
     name_rect.y -= 70
+    name_rect.x -= camera_x
+    name_rect.y -= camera_y
     name_rect.x -= 70
     screen.blit(name, name_rect)
     return
@@ -192,8 +195,8 @@ def show_entities_and_their_particles(entity, camera_x: int, camera_y: int):
                 screen.blit(zombie_image, M_rect)
             else:
                 screen.blit(mob_image, M_rect)
-            show_mob_lvl(m=entity)
-            show_mob_health(m=entity)
+            show_mob_lvl(m=entity, camera_x=camera_x, camera_y=camera_y)
+            show_mob_health(m=entity, camera_x=camera_x, camera_y=camera_y)
     else:
         P_rect.center = entity_x, entity_y
         if entity.Class == 'Mage':
@@ -264,6 +267,7 @@ def receive(sock: socket.socket):
             player2.health = int(health)
             player2.picked = players[0].picked
             player2.last_time_used_ability = players[0].last_time_used_ability
+            player2.mobs_on_screen = players[0].mobs_on_screen
             flag = False
             for i, player1 in enumerate(players):
                 if player1.nickname == player2.nickname:
@@ -305,6 +309,26 @@ def receive(sock: socket.socket):
         elif data_from_server.startswith('a'):
             local_player.is_ability_active = True
             local_player.last_time_used_ability = time.time()
+        elif data_from_server.startswith('m'):
+            lvl, x, y, health, is_melee = data_from_server[1:].split('|')
+            if is_melee == 'False':
+                is_melee = False
+            else:
+                is_melee = True
+            flag = False
+            for i, m in enumerate(players[0].mobs_on_screen):
+                if m.lvl == int(lvl):
+                    flag = True
+                    players[0].mobs_on_screen[i].x = int(x)
+                    players[0].mobs_on_screen[i].y = int(y)
+                    players[0].mobs_on_screen[i].health = int(health)
+            if not flag:
+                players[0].mobs_on_screen.append(mob.Mob(int(x), int(y), int(lvl)))
+                players[0].mobs_on_screen[-1].is_melee = is_melee
+        elif data_from_server.startswith('$'):
+            for m in players[0].mobs_on_screen:
+                if m.lvl == int(data_from_server[1:]):
+                    players[0].mobs_on_screen.remove(m)
 
 
 def show_background(camera_x: int, camera_y: int):
@@ -442,7 +466,6 @@ def main():
         pygame.display.update()
     players.append(local_player)
 
-    print(local_player.nickname)
     for i in range(5):
         packet = f'*{local_player.nickname}|p'
         client_udp_socket_for_particles.sendto(packet.encode(), server_ip)
@@ -450,10 +473,13 @@ def main():
         client_udp_socket_for_players.sendto(packet.encode(), server_ip)
         packet = f'*{local_player.nickname}|c'
         client_udp_socket_for_chat.sendto(packet.encode(), server_ip)
+        packet = f'*{local_player.nickname}|m'
+        client_udp_socket_for_mobs.sendto(packet.encode(), server_ip)
 
     threading.Thread(target=receive, daemon=True, args=(client_udp_socket_send,)).start()
     threading.Thread(target=receive, daemon=True, args=(client_udp_socket_for_players,)).start()
     threading.Thread(target=receive, daemon=True, args=(client_udp_socket_for_chat,)).start()
+    threading.Thread(target=receive, daemon=True, args=(client_udp_socket_for_mobs,)).start()
     threading.Thread(target=receive, daemon=True, args=(client_udp_socket_for_particles,)).start()
     running = True
     frame = 0
@@ -471,7 +497,6 @@ def main():
         show_ability_cool_down(players[0], settings.camera_x, settings.camera_y)
         show_inventory(players[0])
         # ------------------------------ display chat messages
-        print(settings.chat_log)
         if settings.chat_enabled:
             height_of_msg = 10
             for msg in settings.chat_log:
@@ -549,6 +574,8 @@ def main():
                         client_udp_socket_send.sendto(packet.encode(), server_ip)
         for p in players:
             show_entities_and_their_particles(p, settings.camera_x, settings.camera_y)
+        for m in players[0].mobs_on_screen:
+            show_entities_and_their_particles(m, settings.camera_x, settings.camera_y)
 
         pygame.display.update()
 

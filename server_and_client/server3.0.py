@@ -20,6 +20,11 @@ mobs = []
 for i in range(1, 101):
     mobs.append(mob.Mob(random.randint(0, 40000), random.randint(0, 20000), i))
 
+mobs[0].x = 100
+mobs[0].y = 100
+mobs[0].home_x = 100
+mobs[0].home_y = 100
+
 
 def time_to_string(t):
     return f'{int(t // 3600)}:{int(t // 60)}:{int(t // 1)}'
@@ -81,7 +86,9 @@ def receive():
                             udp_server_socket.sendto(packet.encode(), current_player.socket_send)
                             udp_server_socket.sendto(packet_for_others.encode(), player1.socket_location)
                     current_player.username = username_hash
-
+                    for Mo in mobs:
+                        packet = f'm{int(Mo.lvl)}|{int(Mo.x)}|{int(Mo.y)}|{int(Mo.health)}|{Mo.is_melee}'
+                        udp_server_socket.sendto(packet.encode(), current_player.socket_send)
             elif data.startswith('l'):
                 username_hash, password_hash = data[1:].split('.')
                 print("login attempt")
@@ -116,6 +123,9 @@ def receive():
                                 packet = f"L{player1.x}.{player1.y}.{player1.Class}.{player1.nickname}.{player1.health}"
                                 udp_server_socket.sendto(packet.encode(), current_player.socket_send)
                                 udp_server_socket.sendto(packet_for_others.encode(), player1.socket_location)
+                        for Mo in mobs:
+                            packet = f'm{int(Mo.lvl)}|{int(Mo.x)}|{int(Mo.y)}|{int(Mo.health)}|{Mo.is_melee}'
+                            udp_server_socket.sendto(packet.encode(), current_player.socket_send)
                     else:
                         raise Exception
                 except:
@@ -123,7 +133,8 @@ def receive():
             elif data == "L":
                 print("leaving")
                 print(current_player.x, current_player.y)
-                players.remove(current_player)
+                if current_player in players:
+                    players.remove(current_player)
                 if current_player.health == 0:
                     current_player.health = 50
                 if current_player.Class != 'tmp':
@@ -204,7 +215,8 @@ def move_particles_for_entity(entity):
                 packet = f'7{particle.x}|{particle.y}|{particle.angle}|{particle.name}|{particle.id_of_particle}'
                 entity.projectiles.remove(particle)
                 for player1 in players:
-                    udp_server_socket.sendto(packet.encode(), player1.socket_particles)
+                    if player1.Class != 'tmp':
+                        udp_server_socket.sendto(packet.encode(), player1.socket_particles)
 
 
 def identify_par_dmg(Ps: list, Ms: list):
@@ -220,7 +232,6 @@ def identify_par_dmg(Ps: list, Ms: list):
                 for P in Ps:
                     P_rect.center = P.x, P.y
                     if P_rect.colliderect(S.hit_box) and not S.hit:
-                        M.projectiles.remove(S)
                         S.hit = True
                         P.health -= int(10 * P.income_dmg_multiplier)
                         if P.health <= 0:
@@ -273,11 +284,17 @@ def generate_drop(x, y, average):
 def move_mobs(mobs: list):
     while 1:
         for Mo in mobs:
-            if Mo.move(players=players):
-                packet = f'm{int(Mo.lvl)}|{int(Mo.x)}|{int(Mo.y)}|{int(Mo.health)}|{Mo.is_melee}'
-                for player1 in players:
-                    if player1.Class != 'tmp':
-                        udp_server_socket.sendto(packet.encode(), player1.socket_mobs)
+            if Mo.is_alive:
+                if Mo.move(players=players):
+                    packet = f'm{int(Mo.lvl)}|{int(Mo.x)}|{int(Mo.y)}|{int(Mo.health)}|{Mo.is_melee}'
+                    for player1 in players:
+                        if player1.Class != 'tmp':
+                            udp_server_socket.sendto(packet.encode(), player1.socket_mobs)
+            elif time.time() - Mo.death_time >= 7:
+                Mo.is_alive = True
+                Mo.x, Mo.y = Mo.home_x, Mo.home_y
+                Mo.health = 100 * Mo.lvl
+            move_particles_for_entity(Mo)
 
 
 def main():
