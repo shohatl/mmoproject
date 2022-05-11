@@ -6,14 +6,15 @@ import random
 from Classes import player, item, dropped_item, mob
 
 start_time = time.time()
+clock = pygame.time.Clock()
 
 pygame.init()
 
 items_on_surface = []
 P_rect = pygame.Rect((0, 0), (66, 92))
 M_rect = pygame.Rect((0, 0), (88, 120))
-udp_server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-udp_server_socket.bind(('0.0.0.0', 42069))
+login_server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+login_server_socket.bind(('0.0.0.0', 42069))
 players = []
 mobs = []
 
@@ -30,14 +31,19 @@ def time_to_string(t):
     return f'{int(t // 3600)}:{int(t // 60)}:{int(t // 1)}'
 
 
-def receive():
+def receive(udp_server_socket):
     while True:
+        if udp_server_socket == login_server_socket:
+            print('login socket')
         data, ip = udp_server_socket.recvfrom(1024)
         data = data.decode()
         if data.startswith('hi'):
             print("new player connected")
-            players.append(player.Player(nickname='a', ip=ip, key=0, Class='tmp'))  # change to database
-            threading.Thread(target=receive, daemon=True).start()
+            new_player = player.Player(nickname='', ip=ip, key=0, Class='tmp')
+            players.append(new_player)  # change to database
+            new_player.socket_server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            new_player.socket_server.bind(('0.0.0.0', 0))
+            threading.Thread(target=receive, daemon=True, args=(new_player.socket_server,)).start()
         else:
             current_player = player.Player(nickname='Oni~Chan', ip=0, key=0, Class='tmp')
             for check_player in players:
@@ -183,6 +189,7 @@ def receive():
             elif data.startswith('b'):
                 current_player.inventory[current_player.picked], current_player.inventory[int(data[1:])] = \
                     current_player.inventory[int(data[1:])], current_player.inventory[current_player.picked]
+        clock.tick(30)
 
 
 def move_players():
@@ -199,8 +206,9 @@ def move_players():
                                 print('1')
                                 print(packet)
                                 print('2')
-                                udp_server_socket.sendto(packet.encode(), player2.socket_location)
+                                player2.socket_server.sendto(packet.encode(), player2.socket_location)
                 move_particles_for_entity(entity=player1)
+        clock.tick(30)
 
 
 #
@@ -210,13 +218,13 @@ def move_particles_for_entity(entity):
             packet = f'2{particle.x}|{particle.y}|{particle.angle}|{particle.name}|{particle.id_of_particle}'
             print(packet)
             for player1 in players:
-                udp_server_socket.sendto(packet.encode(), player1.socket_particles)
+                player1.socket_server.sendto(packet.encode(), player1.socket_particles)
             if particle.range <= 0 or (particle.hit and particle.speed != 1):
                 packet = f'7{particle.x}|{particle.y}|{particle.angle}|{particle.name}|{particle.id_of_particle}'
                 entity.projectiles.remove(particle)
                 for player1 in players:
                     if player1.Class != 'tmp':
-                        udp_server_socket.sendto(packet.encode(), player1.socket_particles)
+                        player1.socket_server.sendto(packet.encode(), player1.socket_particles)
 
 
 def identify_par_dmg(Ps: list, Ms: list):
@@ -238,7 +246,7 @@ def identify_par_dmg(Ps: list, Ms: list):
                             P.health = 0
                         packet = f"L{P.x}.{P.y}.{P.Class}.{P.nickname}.{P.health}"
                         for player1 in players:
-                            udp_server_socket.sendto(packet.encode(), player1.socket_location)
+                            player1.socket_server.sendto(packet.encode(), player1.socket_location)
         for P1 in Ps:
             for par in P1.projectiles:
                 for M in Ms:
@@ -255,7 +263,7 @@ def identify_par_dmg(Ps: list, Ms: list):
                                 packet = f'${M.lvl}'
                                 for player1 in players:
                                     if player1.Class != 'tmp':
-                                        udp_server_socket.sendto(packet.encode(), player1.socket_mobs)
+                                        player1.socket_server.sendto(packet.encode(), player1.socket_mobs)
 
                 for P2 in Ps:
                     if P2.nickname != P1.nickname:
@@ -268,7 +276,8 @@ def identify_par_dmg(Ps: list, Ms: list):
                                 P2.health = 0
                             packet = f"L{P2.x}.{P2.y}.{P2.Class}.{P2.nickname}.{P2.health}"
                             for player1 in players:
-                                udp_server_socket.sendto(packet.encode(), player1.socket_location)
+                                player1.socket_server.sendto(packet.encode(), player1.socket_location)
+        clock.tick(30)
 
 
 def generate_drop(x, y, average):
@@ -289,20 +298,22 @@ def move_mobs(mobs: list):
                     packet = f'm{int(Mo.lvl)}|{int(Mo.x)}|{int(Mo.y)}|{int(Mo.health)}|{Mo.is_melee}'
                     for player1 in players:
                         if player1.Class != 'tmp':
-                            udp_server_socket.sendto(packet.encode(), player1.socket_mobs)
+                            player1.socket_server.sendto(packet.encode(), player1.socket_mobs)
             elif time.time() - Mo.death_time >= 7:
                 Mo.is_alive = True
                 Mo.x, Mo.y = Mo.home_x, Mo.home_y
                 Mo.health = 100 * Mo.lvl
             move_particles_for_entity(Mo)
+        clock.tick(30)
 
 
 def main():
-    threading.Thread(target=receive, daemon=True).start()
-    # threading.Thread(target=move_players, daemon=True).start()
+    threading.Thread(target=receive, daemon=True, args=(login_server_socket,)).start()
+    threading.Thread(target=move_players, daemon=True).start()
     threading.Thread(target=identify_par_dmg, daemon=True, args=(players, mobs,)).start()
     threading.Thread(target=move_mobs, daemon=True, args=(mobs,)).start()
-    move_players()
+    while True:
+        clock.tick(30)
 
 
 if __name__ == '__main__':

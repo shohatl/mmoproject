@@ -1,8 +1,8 @@
 marku
 1234
 Scout
-1416
-1432
+2240
+752
 0
-100
+30
 bow,1@False@False@False@False@False
