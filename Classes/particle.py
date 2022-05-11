@@ -2,9 +2,12 @@ import math
 import time
 import pygame
 
+id = 0
+
 
 class Particle:
     def __init__(self, x, y, target_x, target_y, speed, range, dmg, name):
+        self.id_of_particle = id
         self.x = x
         self.y = y
         self.angle = math.atan2(float(self.y - target_y), float(self.x - target_x))
@@ -33,3 +36,5 @@ class Particle:
             self.y -= self.velocity_y
             self.hit_box.center = int(self.x), int(self.y)
             self.range -= self.speed
+            return True
+        return False

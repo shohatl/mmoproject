@@ -1,8 +1,8 @@
 adir
 1234
 Scout
-2912
-672
+2880
+496
 0
 100
 bow,1@False@False@False@False@False

@@ -33,7 +33,7 @@ class Mob:
     def move(self, players):
         if time.time() - self.last_time_moved < 10 ** -3:
             self.has_moved = False
-            return
+            return False
         self.has_moved = True
         self.has_target = False
         # criteria for movement
@@ -49,7 +49,8 @@ class Mob:
                 player_rect.center = player.x, player.y
                 if player_rect.colliderect(trigger_rect):
                     if self.has_target:
-                        if (player.x - self.x) ** 2 + (player.y - self.y) ** 2 < (self.target_x - self.x) ** 2 + (self.target_y - self.y) ** 2:
+                        if (player.x - self.x) ** 2 + (player.y - self.y) ** 2 < (self.target_x - self.x) ** 2 + (
+                                self.target_y - self.y) ** 2:
                             self.target_x = player.x
                             self.target_y = player.y
                     else:
@@ -71,7 +72,8 @@ class Mob:
         if self.has_target and time.time() - self.last_attacked > 2:
             if not self.is_melee:
                 self.last_attacked = time.time()
-                self.projectiles.append(particle.Particle(self.x, self.y, self.target_x, self.target_y, 20, 800, self.lvl * 5, 'spear'))
+                self.projectiles.append(
+                    particle.Particle(self.x, self.y, self.target_x, self.target_y, 20, 800, self.lvl * 5, 'spear'))
             else:
                 M_rect = pygame.Rect((0, 0), (88, 120))
                 M_rect.center = self.x, self.y
@@ -80,6 +82,7 @@ class Mob:
                     P_rect.center = P.x, P.y
                     if P_rect.colliderect(M_rect):
                         self.last_attacked = time.time()
-                        P.health -= 10*P.income_dmg_multiplier
+                        P.health -= 10 * P.income_dmg_multiplier
                         if P.health <= 0:
                             players.remove(P)
+        return self.y != self.target_y or self.x != self.target_x

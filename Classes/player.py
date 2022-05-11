@@ -8,6 +8,11 @@ collide_list = [4, 5, 22, 23, 26, 39, 40, 41, 43, 57, 59, 60, 75, 76, 77, 78, 92
 
 class Player:
     def __init__(self, nickname, ip, key, Class):
+        self.socket_send = ip
+        self.socket_location = ip
+        self.socket_particles = ip
+        self.socket_mobs = ip
+        self.socket_chat = ip
         self.x = 100
         self.y = 100
         self.dir_x = 0
@@ -32,7 +37,6 @@ class Player:
         self.gold = 0
         self.health = 100
         self.nickname = nickname
-        self.ip = ip
         self.key = key
         self.expected_syn = secrets.randbelow(1000)
         if self.expected_syn < 100:
@@ -58,7 +62,9 @@ class Player:
         return False
 
     def attack(self, mouseX, mouseY):
-        if time.time() - self.last_time_attack > self.inventory[self.picked].cool_down:
+        if self.inventory[self.picked] and time.time() - self.last_time_attack > self.inventory[self.picked].cool_down:
+            particle.id += 1
+            particle.id %= 1000
             self.last_time_attack = time.time()
             self.projectiles.append(particle.Particle(self.x, self.y, mouseX, mouseY, self.inventory[self.picked].speed,
                                                       self.inventory[self.picked].range,
