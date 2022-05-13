@@ -7,7 +7,6 @@ from Classes import player, item, dropped_item, mob
 
 start_time = time.time()
 clock = pygame.time.Clock()
-
 pygame.init()
 
 items_on_surface = []
@@ -31,7 +30,7 @@ def time_to_string(t):
     return f'{int(t // 3600)}:{int(t // 60)}:{int(t // 1)}'
 
 
-def receive(udp_server_socket):
+def receive(udp_server_socket: socket.socket):
     while True:
         if udp_server_socket == login_server_socket:
             print('login socket')
@@ -45,7 +44,7 @@ def receive(udp_server_socket):
             new_player.socket_server.bind(('0.0.0.0', 0))
             threading.Thread(target=receive, daemon=True, args=(new_player.socket_server,)).start()
         else:
-            current_player = player.Player(nickname='Oni~Chan', ip=0, key=0, Class='tmp')
+            current_player = player.Player(nickname='Glidaria', ip=0, key=0, Class='tmp')
             for check_player in players:
                 if check_player.socket_send == ip:
                     current_player = check_player
@@ -72,9 +71,12 @@ def receive(udp_server_socket):
                 print('sign up received')
                 nickname, username_hash, password_hash, Class = data[1:].split('.')
                 try:
-                    file = open(f"../Database/{username_hash}.txt", 'rb')
-                    file.close()
-                    udp_server_socket.sendto('sdenyaccess'.encode(), current_player.socket_send)
+                    if nickname.index('!') == -1:
+                        file = open(f"../Database/{username_hash}.txt", 'rb')
+                        file.close()
+                        udp_server_socket.sendto('sdenyaccess'.encode(), current_player.socket_send)
+                    else:
+                        udp_server_socket.sendto('sdenyaccess'.encode(), current_player.socket_send)
                 except:
                     file = open(f"../Database/{username_hash}.txt", 'a+')
                     x, y, gold, health = 1000, 1000, 0, 100
@@ -170,7 +172,7 @@ def receive(udp_server_socket):
             elif data.startswith('A'):
                 target_x, target_y = data[1:].split('.')
                 print(target_x, target_y)
-                current_player.attack(int(target_x), int(target_y))
+                current_player.attack(mouseX=int(target_x), mouseY=int(target_y))
             elif data.startswith('a'):
                 if not current_player.is_ability_active:
                     current_player.use_ability()
@@ -211,26 +213,31 @@ def move_players():
         clock.tick(30)
 
 
-#
 def move_particles_for_entity(entity):
     for particle in entity.projectiles:
-        if particle.move(entity.x, entity.y):
-            packet = f'2{particle.x}|{particle.y}|{particle.angle}|{particle.name}|{particle.id_of_particle}'
+        packet = ''
+        if particle.first_move:
+            packet = f'2{particle.x}|{particle.y}|{particle.angle}|{particle.name}|{particle.id_of_particle}|{particle.dmg}|{particle.range}|{particle.speed}'
+            try:
+                packet = packet + f'|{entity.nickname}'
+            except:
+                packet = packet + '|!'
             print(packet)
+        elif particle.range <= 0 or (particle.hit and particle.speed != 1):
+            packet = f'7{particle.id_of_particle}'
+            entity.projectiles.remove(particle)
+        if packet != '':
+            print("Sending particle packet..")
             for player1 in players:
-                player1.socket_server.sendto(packet.encode(), player1.socket_particles)
-            if particle.range <= 0 or (particle.hit and particle.speed != 1):
-                packet = f'7{particle.x}|{particle.y}|{particle.angle}|{particle.name}|{particle.id_of_particle}'
-                entity.projectiles.remove(particle)
-                for player1 in players:
-                    if player1.Class != 'tmp':
-                        player1.socket_server.sendto(packet.encode(), player1.socket_particles)
+                if player1.Class != 'tmp':
+                    player1.socket_server.sendto(packet.encode(), player1.socket_particles)
+        particle.move(entity=entity)
 
 
 def identify_par_dmg(Ps: list, Ms: list):
     while True:
         """
-        gotaa have a thread for itself and the list should be globals
+        gotta have a thread for itself and the list should be globals
         :param Ps: A list of all the players that exist in the game
         :param Ms: A list of the mobs
         :return: new health for each entity
@@ -303,7 +310,7 @@ def move_mobs(mobs: list):
                 Mo.is_alive = True
                 Mo.x, Mo.y = Mo.home_x, Mo.home_y
                 Mo.health = 100 * Mo.lvl
-            move_particles_for_entity(Mo)
+            move_particles_for_entity(entity=Mo)
         clock.tick(30)
 
 

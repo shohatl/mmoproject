@@ -65,8 +65,6 @@ class Player:
 
     def attack(self, mouseX, mouseY):
         if self.inventory[self.picked] and time.time() - self.last_time_attack > self.inventory[self.picked].cool_down:
-            particle.id += 1
-            particle.id %= 1000
             self.last_time_attack = time.time()
             self.projectiles.append(particle.Particle(self.x, self.y, mouseX, mouseY, self.inventory[self.picked].speed,
                                                       self.inventory[self.picked].range,

@@ -1,12 +1,22 @@
 import socket
 import sys
 import threading
-from Classes import player, config, mob, item, particle
-import pygame
 import time
+import math
 
-client_udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-server_ip = ('127.0.0.1', 42069)
+import pygame
+
+from Classes import player, config, mob, item, particle
+
+clock = pygame.time.Clock()
+
+client_udp_socket_send = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+client_udp_socket_for_particles = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+client_udp_socket_for_mobs = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+client_udp_socket_for_players = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+client_udp_socket_for_chat = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+settings = config.Config()
+settings.server_ip = ('127.0.0.1', 42069)
 players = []
 
 pygame.init()
@@ -48,7 +58,6 @@ zombie_image = pygame.image.load('../Assets/basics/zombie.png')
 mage_img = pygame.image.load('../Assets/basics/Mage.png')
 tank_img = pygame.image.load('../Assets/basics/Tank.png')
 scout_img = pygame.image.load('../Assets/basics/Scout.png')
-settings = config.Config()
 
 
 class Button:
@@ -152,17 +161,20 @@ def show_player_health(p: player.Player, camera_x, camera_y):
     return
 
 
-def show_mob_health(m: mob.Mob):
-    pygame.draw.rect(screen, (0, 255, 0), ((m.x - 50, m.y - 75), (m.health // m.lvl, 10)))
-    pygame.draw.rect(screen, (255, 0, 0), ((m.x - 50 + m.health // m.lvl, m.y - 75), (100 - m.health // m.lvl, 10)))
+def show_mob_health(m: mob.Mob, camera_x: int, camera_y: int):
+    pygame.draw.rect(screen, (0, 255, 0), ((m.x - 50 - camera_x, m.y - 75 - camera_y), (m.health // m.lvl, 10)))
+    pygame.draw.rect(screen, (255, 0, 0),
+                     ((m.x - 50 - camera_x + m.health // m.lvl, m.y - 75 - camera_y), (100 - m.health // m.lvl, 10)))
     return
 
 
-def show_mob_lvl(m: mob.Mob):
+def show_mob_lvl(m: mob.Mob, camera_x: int, camera_y: int):
     name = font.render(str(m.lvl), True, (0, 0, 0))
     name_rect = name.get_rect()
     name_rect.center = m.x, m.y
     name_rect.y -= 70
+    name_rect.x -= camera_x
+    name_rect.y -= camera_y
     name_rect.x -= 70
     screen.blit(name, name_rect)
     return
@@ -187,8 +199,8 @@ def show_entities_and_their_particles(entity, camera_x: int, camera_y: int):
                 screen.blit(zombie_image, M_rect)
             else:
                 screen.blit(mob_image, M_rect)
-            show_mob_lvl(m=entity)
-            show_mob_health(m=entity)
+            show_mob_lvl(m=entity, camera_x=camera_x, camera_y=camera_y)
+            show_mob_health(m=entity, camera_x=camera_x, camera_y=camera_y)
     else:
         P_rect.center = entity_x, entity_y
         if entity.Class == 'Mage':
@@ -209,7 +221,6 @@ def show_entities_and_their_particles(entity, camera_x: int, camera_y: int):
         screen.blit(S.image, S.hit_box)
         S.hit_box.x += camera_x
         S.hit_box.y += camera_y
-        entity.projectiles.remove(S)
     return
 
 
@@ -221,7 +232,7 @@ def movement():
         local_player.dir_y = current_y_dir
         local_player.dir_x = current_x_dir
         packet = f'M{local_player.dir_x}.{local_player.dir_y}'
-        client_udp_socket.sendto(packet.encode(), server_ip)
+        client_udp_socket_send.sendto(packet.encode(), settings.server_ip)
     return
 
 
@@ -248,17 +259,21 @@ def show_ability_cool_down(p: player.Player, camera_x: int, camera_y: int):
         pygame.draw.rect(screen, (40, 30, 240), ((p.x - camera_x - 50, p.y - camera_y - 57), (100 - T, 3)))
 
 
-def receive():
+def receive(sock: socket.socket):
     while 1:
-        data_from_server = client_udp_socket.recvfrom(1024)[0].decode()
+        clock.tick(30)
+        data_from_server = sock.recvfrom(1024)[0].decode()
         print(data_from_server)
         if data_from_server.startswith('L'):
             x, y, Class, nickname, health = data_from_server[1:].split('.')
             player2 = player.Player(nickname=nickname, Class=Class, ip=0, key=0)
+            player2.projectiles = players[0].projectiles
             player2.x = int(x)
             player2.y = int(y)
             player2.health = int(health)
             player2.picked = players[0].picked
+            player2.last_time_used_ability = players[0].last_time_used_ability
+            player2.mobs_on_screen = players[0].mobs_on_screen
             flag = False
             for i, player1 in enumerate(players):
                 if player1.nickname == player2.nickname:
@@ -274,31 +289,58 @@ def receive():
                     players.remove(player1)
                     break
         elif data_from_server.startswith('2'):
-            print(data_from_server[1:])
-            for particle1 in data_from_server[1:].split('@'):
-                print(particle1)
-                x, y, angle, name = particle1.split('|')
-                par = particle.Particle(x=int(float(x)), y=int(float(y)), target_x=0, target_y=0, speed=0, range=0,
-                                        dmg=0,
-                                        name=name)
+            print("Obtained particle!")
+            x, y, angle, name, id_of_par, dmg, range, speed, nickname = data_from_server[1:].split('|')
+            par = particle.Particle(x=int(float(x)), y=int(float(y)), target_x=0, target_y=0, speed=float(speed), range=float(range),
+                                    dmg=float(dmg),
+                                    name=name)
+            par.id_of_particle = int(id_of_par)
+            par.angle = float(angle)
+            par.angle /= -180 / math.pi
+            par.velocity_x = float(par.speed * math.cos(par.angle))
+            par.velocity_y = float(par.speed * math.sin(par.angle))
+            par.angle *= -180 / math.pi
+            flag = True
+            for i, player1 in enumerate(players):
+                if player1.nickname == nickname:
+                    flag = False
+                    players[i].projectiles.append(par)
+                    break
+            if flag:
                 players[0].projectiles.append(par)
-                players[0].projectiles[-1].angle = float(angle)
         elif data_from_server.startswith('7'):
-            x, y, angle, name = data_from_server[1:].split('|')
-            for par1 in local_player.projectiles:
-                if par1.angle == float(angle):
-                    players[0].projectiles.remove(par1)
-        elif data_from_server.startswith('H'):
-            pass
-        elif data_from_server.startswith('G'):
-            pass
-        elif data_from_server.startswith('I'):
-            pass
-        elif data_from_server.startswith('C'):
-            pass
+            id_of_par = data_from_server[1:]
+            for player1 in players:
+                for par1 in player1.projectiles:
+                    if int(par1.id_of_particle) == int(id_of_par):
+                        player1.projectiles.remove(par1)
+        elif data_from_server.startswith('c'):
+            settings.chat_log.append(data_from_server[1:])
+            if len(settings.chat_log) > 5:
+                settings.chat_log = settings.chat_log[1:]
         elif data_from_server.startswith('a'):
             local_player.is_ability_active = True
             local_player.last_time_used_ability = time.time()
+        elif data_from_server.startswith('m'):
+            lvl, x, y, health, is_melee = data_from_server[1:].split('|')
+            if is_melee == 'False':
+                is_melee = False
+            else:
+                is_melee = True
+            flag = False
+            for i, m in enumerate(players[0].mobs_on_screen):
+                if m.lvl == int(lvl):
+                    flag = True
+                    players[0].mobs_on_screen[i].x = int(x)
+                    players[0].mobs_on_screen[i].y = int(y)
+                    players[0].mobs_on_screen[i].health = int(health)
+            if not flag:
+                players[0].mobs_on_screen.append(mob.Mob(int(x), int(y), int(lvl)))
+                players[0].mobs_on_screen[-1].is_melee = is_melee
+        elif data_from_server.startswith('$'):
+            for m in players[0].mobs_on_screen:
+                if m.lvl == int(data_from_server[1:]):
+                    players[0].mobs_on_screen.remove(m)
 
 
 def show_background(camera_x: int, camera_y: int):
@@ -313,8 +355,10 @@ def show_background(camera_x: int, camera_y: int):
 
 
 def sign_up(nickname: str, username: str, password: str, classa: str):
-    client_udp_socket.sendto(f's{nickname}.{username}.{password}.{classa}'.encode(), server_ip)
-    data = client_udp_socket.recvfrom(1024)[0].decode()
+    client_udp_socket_send.sendto(f's{nickname}.{username}.{password}.{classa}'.encode(), settings.server_ip)
+    data, ip = client_udp_socket_send.recvfrom(1024)
+    data = data.decode()
+    settings.server_ip = ip
     print(data)
     if data == "sallow":
         local_player.nickname = nickname
@@ -323,8 +367,10 @@ def sign_up(nickname: str, username: str, password: str, classa: str):
 
 
 def login(username: str, password: str):
-    client_udp_socket.sendto(f'l{username}.{password}'.encode(), server_ip)
-    data = client_udp_socket.recvfrom(1024)[0].decode()
+    client_udp_socket_send.sendto(f'l{username}.{password}'.encode(), settings.server_ip)
+    data, ip = client_udp_socket_send.recvfrom(1024)
+    data = data.decode()
+    settings.server_ip = ip
     print(data)
     if data.startswith("lallow"):
         nickname, Class, x, y, gold, health, inventory = data[6:].split('.')
@@ -370,7 +416,7 @@ def show_inventory(p: player.Player):
 
 
 def main():
-    client_udp_socket.sendto("hi".encode(), server_ip)
+    client_udp_socket_send.sendto("hi".encode(), settings.server_ip)
     login_image = pygame.image.load("../Assets/basics/loginBackground.png")
     mode = Button(x=300, y=100, height=30, width=200, text="Login")
     cl = pygame.time.Clock()
@@ -416,8 +462,9 @@ def main():
                         radio_button2.reset()
         for event in pygame.event.get():
             if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+                print("I am here")
                 pygame.quit()
-                client_udp_socket.sendto("L".encode(), server_ip)
+                client_udp_socket_send.sendto("L".encode(), settings.server_ip)
                 sys.exit()
         if mode.check_pressed():
             print('pressed')
@@ -432,56 +479,127 @@ def main():
                 mode.text = 'Login'
                 radio_buttons = []
                 text_fields = [TextField(100, 500, 150, 50, 'Username'), TextField(300, 500, 150, 50, 'Password')]
-        cl.tick(60)
+        cl.tick(30)
         pygame.display.update()
     players.append(local_player)
-    threading.Thread(target=receive, daemon=True).start()
-    running = True
 
+    for i in range(5):
+        packet = f'*{local_player.nickname}|p'
+        client_udp_socket_for_particles.sendto(packet.encode(), settings.server_ip)
+        packet = f'*{local_player.nickname}|o'
+        client_udp_socket_for_players.sendto(packet.encode(), settings.server_ip)
+        packet = f'*{local_player.nickname}|c'
+        client_udp_socket_for_chat.sendto(packet.encode(), settings.server_ip)
+        packet = f'*{local_player.nickname}|m'
+        client_udp_socket_for_mobs.sendto(packet.encode(), settings.server_ip)
+
+    threading.Thread(target=receive, daemon=True, args=(client_udp_socket_send,)).start()
+    threading.Thread(target=receive, daemon=True, args=(client_udp_socket_for_players,)).start()
+    threading.Thread(target=receive, daemon=True, args=(client_udp_socket_for_chat,)).start()
+    threading.Thread(target=receive, daemon=True, args=(client_udp_socket_for_mobs,)).start()
+    threading.Thread(target=receive, daemon=True, args=(client_udp_socket_for_particles,)).start()
+    running = True
+    frame = 0
     while running:
-        print(players[0].picked)
+        frame += 1
+        frame %= 60
         screen.fill('red')
-        movement()
+        keys = pygame.key.get_pressed()
+        if not settings.in_chat:
+            movement()
         settings.camera_x, settings.camera_y = \
             players[0].x - screen.get_width() // 2, players[0].y - screen.get_height() // 2
 
         show_background(camera_x=settings.camera_x, camera_y=settings.camera_y)
         show_ability_cool_down(players[0], settings.camera_x, settings.camera_y)
         show_inventory(players[0])
+        # ------------------------------ display chat messages
+        if settings.chat_enabled:
+            height_of_msg = 10
+            for msg in settings.chat_log:
+                screen.blit(font.render(msg, True, (255, 255, 255)), (20, height_of_msg))
+                height_of_msg += 30
+        # ------------------------------------
+
+        # ------------------------------------- show the typed message
+        if settings.in_chat:
+            if keys[pygame.K_BACKSPACE] and keys[pygame.K_LCTRL]:
+                settings.chat_message = ''
+            if keys[pygame.K_BACKSPACE] and settings.chat_message and not frame % 4:
+                settings.chat_message = settings.chat_message[:-1]
+            screen.blit(chat_box, (10, 200))
+            blinking_shit = ''
+            if frame < 30:
+                blinking_shit = '|'
+            screen.blit(font.render(settings.chat_message + blinking_shit, True, (255, 255, 255)), (13, 205))
+        if players[0].health == 0:
+            client_udp_socket_send.sendto("L".encode(), settings.server_ip)
+            pygame.quit()
+            sys.exit()
         for event in pygame.event.get():
             if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 pygame.quit()
-                client_udp_socket.sendto("L".encode(), server_ip)
+                client_udp_socket_send.sendto("L".encode(), settings.server_ip)
                 sys.exit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
                     mx, my = pygame.mouse.get_pos()
                     packet = f'A{mx + settings.camera_x}.{my + settings.camera_y}'
                     print(packet)
-                    client_udp_socket.sendto(packet.encode(), server_ip)
+                    client_udp_socket_send.sendto(packet.encode(), settings.server_ip)
                 elif event.button == 4:
                     players[0].picked += 1
                     players[0].picked %= 6
                     packet = '41'
                     print(players[0].picked, 'new slot')
-                    client_udp_socket.sendto(packet.encode(), server_ip)
+                    client_udp_socket_send.sendto(packet.encode(), settings.server_ip)
                 elif event.button == 5:
                     players[0].picked -= 1
                     players[0].picked %= 6
                     print(players[0].picked, 'new slot')
                     packet = '4-1'
-                    client_udp_socket.sendto(packet.encode(), server_ip)
-            # elif event.type == pygame.KEYDOWN:
-            #     if event.key == pygame.K_e:
-            #         packet = 'a'
-            #         client_udp_socket.sendto(packet.encode(), server_ip)
+                    client_udp_socket_send.sendto(packet.encode(), settings.server_ip)
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN and settings.chat_enabled:
+                    settings.in_chat = not settings.in_chat
+                    if not settings.in_chat:
+                        if settings.chat_message:
+                            packet = f'c({players[0].nickname}): {settings.chat_message}'
+                            settings.chat_message = ''
+                            client_udp_socket_send.sendto(packet.encode(), settings.server_ip)
+                    else:
+                        client_udp_socket_send.sendto('M0.0'.encode(), settings.server_ip)
+                elif settings.in_chat:
+                    if len(settings.chat_message) < 45 and '~' >= event.unicode >= ' ':
+                        settings.chat_message += event.unicode
+                elif event.key == pygame.K_TAB:
+                    settings.chat_enabled = not settings.chat_enabled
+                elif event.key == pygame.K_e:
+                    packet = 'a'
+                    client_udp_socket_send.sendto(packet.encode(), settings.server_ip)
+                elif pygame.K_1 <= event.key <= pygame.K_6:
+                    if not keys[pygame.K_i]:
+                        players[0].picked = int(event.unicode) - 1
+                        packet = f'j{int(event.unicode) - 1}'
+                        client_udp_socket_send.sendto(packet.encode(), settings.server_ip)
+                    else:
+                        players[0].inventory[players[0].picked], players[0].inventory[int(event.unicode) - 1] = \
+                            players[0].inventory[
+                                int(event.unicode) - 1], \
+                            players[0].inventory[players[0].picked]
+                        packet = f'b{int(event.unicode) - 1}'
+                        client_udp_socket_send.sendto(packet.encode(), settings.server_ip)
         for p in players:
             show_entities_and_their_particles(p, settings.camera_x, settings.camera_y)
-
+            for par in p.projectiles:
+                if par.range <= 0:
+                    p.projectiles.remove(par)
+                par.move(entity=p)
+        for m in players[0].mobs_on_screen:
+            show_entities_and_their_particles(m, settings.camera_x, settings.camera_y)
         pygame.display.update()
+        clock.tick(30)
 
-
-#
 
 if __name__ == '__main__':
     main()

@@ -74,8 +74,6 @@ class Mob:
                 self.last_attacked = time.time()
                 self.projectiles.append(
                     particle.Particle(self.x, self.y, self.target_x, self.target_y, 20, 800, self.lvl * 5, 'spear'))
-                particle.id += 1
-                particle.id %= 1000
             else:
                 M_rect = pygame.Rect((0, 0), (88, 120))
                 M_rect.center = self.x, self.y

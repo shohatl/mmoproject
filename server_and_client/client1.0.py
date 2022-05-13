@@ -1,9 +1,12 @@
+import math
 import socket
 import sys
 import threading
-from Classes import player, config, mob, item, particle
-import pygame
 import time
+
+import pygame
+
+from Classes import player, config, mob, item, particle
 
 clock = pygame.time.Clock()
 
@@ -55,7 +58,6 @@ zombie_image = pygame.image.load('../Assets/basics/zombie.png')
 mage_img = pygame.image.load('../Assets/basics/Mage.png')
 tank_img = pygame.image.load('../Assets/basics/Tank.png')
 scout_img = pygame.image.load('../Assets/basics/Scout.png')
-
 
 
 class Button:
@@ -264,19 +266,14 @@ def receive(sock: socket.socket):
         print(data_from_server)
         if data_from_server.startswith('L'):
             x, y, Class, nickname, health = data_from_server[1:].split('.')
-            player2 = player.Player(nickname=nickname, Class=Class, ip=0, key=0)
-            player2.x = int(x)
-            player2.y = int(y)
-            player2.health = int(health)
-            player2.picked = players[0].picked
-            player2.last_time_used_ability = players[0].last_time_used_ability
-            player2.mobs_on_screen = players[0].mobs_on_screen
-            flag = False
-            for i, player1 in enumerate(players):
-                if player1.nickname == player2.nickname:
-                    players[i] = player2
-                    flag = True
-            if not flag:
+            flag = True
+            for player1 in players:
+                if player1.nickname == nickname:
+                    player1.x, player1.y, player1.health = int(x), int(y), int(health)
+                    flag = False
+            if flag:
+                player2 = player.Player(nickname=nickname, Class=Class, ip=0, key=0)
+                player2.x, player2.y, player2.health = int(x), int(y), int(health)
                 players.append(player2)
         elif data_from_server.startswith('8'):
             nickname = data_from_server[1:]
@@ -286,25 +283,32 @@ def receive(sock: socket.socket):
                     players.remove(player1)
                     break
         elif data_from_server.startswith('2'):
-            x, y, angle, name, id_of_par = data_from_server[1:].split('|')
-            par = particle.Particle(x=int(float(x)), y=int(float(y)), target_x=0, target_y=0, speed=0, range=0,
-                                    dmg=0,
+            print("Obtained particle!")
+            x, y, angle, name, id_of_par, dmg, range, speed, nickname = data_from_server[1:].split('|')
+            par = particle.Particle(x=int(float(x)), y=int(float(y)), target_x=0, target_y=0, speed=float(speed),
+                                    range=float(range),
+                                    dmg=float(dmg),
                                     name=name)
             par.id_of_particle = int(id_of_par)
             par.angle = float(angle)
-            flag = False
-            for i, pr in enumerate(players[0].projectiles):
-                if pr.id_of_particle == par.id_of_particle:
-                    players[0].projectiles[i] = par
-                    flag = True
+            par.angle /= -180 / math.pi
+            par.velocity_x = float(par.speed * math.cos(par.angle))
+            par.velocity_y = float(par.speed * math.sin(par.angle))
+            par.angle *= -180 / math.pi
+            flag = True
+            for player1 in players:
+                if player1.nickname == nickname:
+                    flag = False
+                    player1.projectiles.append(par)
                     break
-            if not flag:
+            if flag:
                 players[0].projectiles.append(par)
         elif data_from_server.startswith('7'):
-            x, y, angle, name, id_of_par = data_from_server[1:].split('|')
-            for par1 in players[0].projectiles:
-                if par1.id_of_particle == int(id_of_par):
-                    players[0].projectiles.remove(par1)
+            id_of_par = data_from_server[1:]
+            for player1 in players:
+                for par1 in player1.projectiles:
+                    if int(par1.id_of_particle) == int(id_of_par):
+                        player1.projectiles.remove(par1)
         elif data_from_server.startswith('c'):
             settings.chat_log.append(data_from_server[1:])
             if len(settings.chat_log) > 5:
@@ -453,6 +457,7 @@ def main():
                         radio_button2.reset()
         for event in pygame.event.get():
             if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+                print("I am here")
                 pygame.quit()
                 client_udp_socket_send.sendto("L".encode(), settings.server_ip)
                 sys.exit()
@@ -469,7 +474,7 @@ def main():
                 mode.text = 'Login'
                 radio_buttons = []
                 text_fields = [TextField(100, 500, 150, 50, 'Username'), TextField(300, 500, 150, 50, 'Password')]
-        cl.tick(60)
+        cl.tick(30)
         pygame.display.update()
     players.append(local_player)
 
@@ -580,15 +585,18 @@ def main():
                         packet = f'b{int(event.unicode) - 1}'
                         client_udp_socket_send.sendto(packet.encode(), settings.server_ip)
         for p in players:
+            print(p.nickname)
+            print(p.projectiles)
             show_entities_and_their_particles(p, settings.camera_x, settings.camera_y)
+            for par in p.projectiles:
+                if par.range <= 0:
+                    p.projectiles.remove(par)
+                par.move(entity=p)
         for m in players[0].mobs_on_screen:
             show_entities_and_their_particles(m, settings.camera_x, settings.camera_y)
-
         pygame.display.update()
         clock.tick(30)
 
-
-#
 
 if __name__ == '__main__':
     main()

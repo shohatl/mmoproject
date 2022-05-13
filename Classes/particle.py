@@ -1,18 +1,22 @@
 import math
 import time
-import pygame
 
-id = 0
+import pygame
 
 
 class Particle:
+    id = 0
+
     def __init__(self, x, y, target_x, target_y, speed, range, dmg, name):
-        self.id_of_particle = id
+        self.id_of_particle = Particle.id
+        Particle.id += 1
+        Particle.id %= 1000
         self.x = x
         self.y = y
         self.angle = math.atan2(float(self.y - target_y), float(self.x - target_x))
         self.speed = speed
         self.range = range
+        self.first_move = True
         self.hit = False
         self.dmg = dmg
         self.last_moved = 0
@@ -25,10 +29,11 @@ class Particle:
         self.hit_box.center = self.x, self.y
         self.name = name
 
-    def move(self, x, y):
+    def move(self, entity) -> bool:
         if time.time() - self.last_moved > 10 ** -3:
+            self.first_move = False
             if self.speed == 1:
-                self.x, self.y = x, y
+                self.x, self.y = entity.x, entity.y
                 self.x -= self.velocity_x * (120 - self.range)
                 self.y -= self.velocity_y * (120 - self.range)
             self.last_moved = time.time()
