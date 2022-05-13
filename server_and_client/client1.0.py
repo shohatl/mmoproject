@@ -6,7 +6,7 @@ import time
 
 import pygame
 
-from Classes import player, config, mob, item, particle
+from Classes import player, config, mob, item, particle, dropped_item
 
 clock = pygame.time.Clock()
 
@@ -317,6 +317,7 @@ def receive(sock: socket.socket):
             local_player.is_ability_active = True
             local_player.last_time_used_ability = time.time()
         elif data_from_server.startswith('m'):
+            print("Received dropping packet")
             lvl, x, y, health, is_melee = data_from_server[1:].split('|')
             if is_melee == 'False':
                 is_melee = False
@@ -333,9 +334,26 @@ def receive(sock: socket.socket):
                 players[0].mobs_on_screen.append(mob.Mob(int(x), int(y), int(lvl)))
                 players[0].mobs_on_screen[-1].is_melee = is_melee
         elif data_from_server.startswith('$'):
+            lvl, x, y, name = data_from_server[1:].split("|")
+            D_item = dropped_item.Dropped_item(x=int(x), y=int(y), lvl=0, name=name, time_dropped=time.time())
+            items_on_surface.append(D_item)
             for m in players[0].mobs_on_screen:
-                if m.lvl == int(data_from_server[1:]):
+                if m.lvl == int(lvl):
                     players[0].mobs_on_screen.remove(m)
+                    break
+        elif data_from_server.startswith('G'):
+            players[0].gold = int(data_from_server[1:])
+        elif data_from_server.startswith('I'):
+            print(data_from_server)
+            for i, itemA in enumerate(data_from_server[1:].split('@')):
+                if itemA == "False":
+                    players[0].inventory[i] = False
+                else:
+                    players[0].inventory[i] = item.Item(itemA.split(",")[0], int(itemA.split(",")[1]))
+        elif data_from_server.startswith('W'):
+            for itemD in items_on_surface:
+                if itemD.id == int(data_from_server[1:]):
+                    items_on_surface.remove(itemD)
 
 
 def show_background(camera_x: int, camera_y: int):
@@ -383,6 +401,28 @@ def login(username: str, password: str):
                 local_player.inventory[i] = item.Item(itema.split(",")[0], int(itema.split(",")[1]))
         return True
     return False
+
+
+def show_gold(gold: int):
+    screen.blit(gold_coin, (35, screen.get_height() - 130))
+    screen.blit(silver_coin, (0, screen.get_height() - 70))
+    screen.blit(bronze_coin, (70, screen.get_height() - 70))
+    to_add = ''
+    if gold >= 1000000000:
+        gold = int(gold / 100000000)
+        gold /= 10.0
+        to_add = 'T'
+    elif gold >= 1000000:
+        gold = int(gold / 100000)
+        gold /= 10.0
+        to_add = 'M'
+    elif gold >= 1000:
+        gold = int(gold / 100)
+        gold /= 10
+        to_add = 'K'
+    toShow = font_gold.render(str(gold) + to_add, True, (255, 215, 0))
+    screen.blit(toShow, (150, screen.get_height() - 110))
+    return
 
 
 def show_inventory(p: player.Player):
@@ -567,33 +607,39 @@ def main():
                 elif settings.in_chat:
                     if len(settings.chat_message) < 45 and '~' >= event.unicode >= ' ':
                         settings.chat_message += event.unicode
+                elif event.key == pygame.K_u:
+                    if players[0].gold >= 1000:
+                        client_udp_socket_send.sendto('U'.encode(), settings.server_ip)
+                        print("Sent heal packet")
+                elif event.key == pygame.K_n:
+                    packet = 'R'
+                    client_udp_socket_send.sendto(packet.encode(), settings.server_ip)
+                elif event.key == pygame.K_m:
+                    packet = 'b'
+                    client_udp_socket_send.sendto(packet.encode(), settings.server_ip)
+                    print("Sent item removal request")
                 elif event.key == pygame.K_TAB:
                     settings.chat_enabled = not settings.chat_enabled
                 elif event.key == pygame.K_e:
                     packet = 'a'
                     client_udp_socket_send.sendto(packet.encode(), settings.server_ip)
                 elif pygame.K_1 <= event.key <= pygame.K_6:
-                    if not keys[pygame.K_i]:
-                        players[0].picked = int(event.unicode) - 1
-                        packet = f'j{int(event.unicode) - 1}'
-                        client_udp_socket_send.sendto(packet.encode(), settings.server_ip)
-                    else:
-                        players[0].inventory[players[0].picked], players[0].inventory[int(event.unicode) - 1] = \
-                            players[0].inventory[
-                                int(event.unicode) - 1], \
-                            players[0].inventory[players[0].picked]
-                        packet = f'b{int(event.unicode) - 1}'
-                        client_udp_socket_send.sendto(packet.encode(), settings.server_ip)
+                    players[0].picked = int(event.unicode) - 1
+                    packet = f'j{int(event.unicode) - 1}'
+                    client_udp_socket_send.sendto(packet.encode(), settings.server_ip)
+        for D_item in items_on_surface:
+            screen.blit(D_item.image, (D_item.x - settings.camera_x - 35, D_item.y - settings.camera_y - 35))
+            if time.time() - D_item.time_dropped > 7:
+                items_on_surface.remove(D_item)
         for p in players:
-            print(p.nickname)
-            print(p.projectiles)
-            show_entities_and_their_particles(p, settings.camera_x, settings.camera_y)
+            show_entities_and_their_particles(entity=p, camera_x=settings.camera_x, camera_y=settings.camera_y)
             for par in p.projectiles:
                 if par.range <= 0:
                     p.projectiles.remove(par)
                 par.move(entity=p)
         for m in players[0].mobs_on_screen:
-            show_entities_and_their_particles(m, settings.camera_x, settings.camera_y)
+            show_entities_and_their_particles(entity=m, camera_x=settings.camera_x, camera_y=settings.camera_y)
+        show_gold(gold=players[0].gold)
         pygame.display.update()
         clock.tick(30)
 

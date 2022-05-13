@@ -1,21 +1,23 @@
-import threading
-import pygame
-import socket
-import time
 import random
+import socket
+import threading
+import time
+
+import pygame
+
 from Classes import player, item, dropped_item, mob
 
 start_time = time.time()
 clock = pygame.time.Clock()
 pygame.init()
 
-items_on_surface = []
 P_rect = pygame.Rect((0, 0), (66, 92))
 M_rect = pygame.Rect((0, 0), (88, 120))
 login_server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 login_server_socket.bind(('0.0.0.0', 42069))
 players = []
 mobs = []
+items_on_surface = []
 
 for i in range(1, 101):
     mobs.append(mob.Mob(random.randint(0, 40000), random.randint(0, 20000), i))
@@ -138,6 +140,33 @@ def receive(udp_server_socket: socket.socket):
                         raise Exception
                 except:
                     udp_server_socket.sendto('ldenyaccess'.encode(), current_player.socket_send)
+            elif data.startswith('U'):
+                print("Received heal packet")
+                if current_player.use_potion():
+                    packet = f'L{current_player.x}.{current_player.y}.{current_player.Class}.{current_player.nickname}.{current_player.health}'
+                    udp_server_socket.sendto(packet.encode(), current_player.socket_send)
+                    packet = f'G{current_player.gold}'
+                    udp_server_socket.sendto(packet.encode(), current_player.socket_send)
+            elif data.startswith('R'):
+                if not current_player.inventory[current_player.picked]:
+                    for itemC in items_on_surface:
+                        if itemC.check_pick_up(p=current_player):
+                            items_on_surface.remove(itemC)
+                            current_player.inventory[current_player.picked] = item.Item(name=itemC.name, lvl=itemC.lvl)
+                            inventory = ''
+                            for itemB in current_player.inventory:
+                                if itemB:
+                                    inventory += f'{itemB.name},{itemB.lvl}'
+                                else:
+                                    inventory += "False"
+                                inventory += '@'
+                            inventory = inventory[:-1]
+                            packet = f'I{inventory}'
+                            udp_server_socket.sendto(packet.encode(), current_player.socket_particles)
+                            packet = f'W{itemC.id}'
+                            for player1 in players:
+                                if player1.Class != 'tmp':
+                                    player1.socket_server.sendto(packet.encode(), player1.socket_mobs)
             elif data == "L":
                 print("leaving")
                 print(current_player.x, current_player.y)
@@ -189,8 +218,27 @@ def receive(udp_server_socket: socket.socket):
             elif data.startswith('j'):
                 current_player.picked = int(data[1:])
             elif data.startswith('b'):
-                current_player.inventory[current_player.picked], current_player.inventory[int(data[1:])] = \
-                    current_player.inventory[int(data[1:])], current_player.inventory[current_player.picked]
+                print("Received item removal request")
+                itemE = current_player.inventory[current_player.picked]
+                if itemE:
+                    items_on_surface.append(
+                        dropped_item.Dropped_item(x=current_player.x, y=current_player.y, lvl=itemE.lvl,
+                                                  name=itemE.name, time_dropped=time.time()))
+                    current_player.inventory[current_player.picked] = False
+                    packet = f'${-1}|{int(current_player.x)}|{int(current_player.y)}|{itemE.name}'
+                    for player1 in players:
+                        if player1 != 'tmp':
+                            udp_server_socket.sendto(packet.encode(), current_player.socket_particles)
+                    inventory = ''
+                    for itemB in current_player.inventory:
+                        if itemB:
+                            inventory += f'{itemB.name},{itemB.lvl}'
+                        else:
+                            inventory += "False"
+                        inventory += '@'
+                    inventory = inventory[:-1]
+                    packet = f'I{inventory}'
+                    udp_server_socket.sendto(packet.encode(), current_player.socket_particles)
         clock.tick(30)
 
 
@@ -264,10 +312,13 @@ def identify_par_dmg(Ps: list, Ms: list):
                             M.health -= par.dmg
                             if M.health <= 0:
                                 P1.gold += M.worth
+                                packet = f'G{P1.gold}'
+                                P1.socket_server.sendto(packet.encode(), P1.socket_send)
                                 M.death_time = time.time()
                                 M.is_alive = False
-                                items_on_surface.append(generate_drop(M.x, M.y, M.lvl))
-                                packet = f'${M.lvl}'
+                                D_item = generate_drop(M.x, M.y, M.lvl)
+                                items_on_surface.append(D_item)
+                                packet = f'${int(M.lvl)}|{int(M.x)}|{int(M.y)}|{D_item.name}'
                                 for player1 in players:
                                     if player1.Class != 'tmp':
                                         player1.socket_server.sendto(packet.encode(), player1.socket_mobs)
@@ -297,20 +348,32 @@ def generate_drop(x, y, average):
     return dropped_item.Dropped_item(x, y, lvl, "cumball", time.time())
 
 
-def move_mobs(mobs: list):
+def move_none_players(mobs: list, items_on_surface: list):
     while 1:
         for Mo in mobs:
+            packet = ''
             if Mo.is_alive:
                 if Mo.move(players=players):
                     packet = f'm{int(Mo.lvl)}|{int(Mo.x)}|{int(Mo.y)}|{int(Mo.health)}|{Mo.is_melee}'
-                    for player1 in players:
-                        if player1.Class != 'tmp':
-                            player1.socket_server.sendto(packet.encode(), player1.socket_mobs)
+                    print('Mob moved')
             elif time.time() - Mo.death_time >= 7:
                 Mo.is_alive = True
                 Mo.x, Mo.y = Mo.home_x, Mo.home_y
                 Mo.health = 100 * Mo.lvl
+                Mo.death_time = 0
+                packet = f'm{int(Mo.lvl)}|{int(Mo.x)}|{int(Mo.y)}|{int(Mo.health)}|{Mo.is_melee}'
+            if packet != '':
+                for player1 in players:
+                    if player1.Class != 'tmp':
+                        player1.socket_server.sendto(packet.encode(), player1.socket_mobs)
             move_particles_for_entity(entity=Mo)
+        for D_item in items_on_surface:
+            if time.time() - D_item.time_dropped > 7:
+                items_on_surface.remove(D_item)
+                packet = f'W{D_item.id}'
+                for player1 in players:
+                    if player1.Class != 'tmp':
+                        player1.socket_server.sendto(packet.encode(), player1.socket_mobs)
         clock.tick(30)
 
 
@@ -318,7 +381,7 @@ def main():
     threading.Thread(target=receive, daemon=True, args=(login_server_socket,)).start()
     threading.Thread(target=move_players, daemon=True).start()
     threading.Thread(target=identify_par_dmg, daemon=True, args=(players, mobs,)).start()
-    threading.Thread(target=move_mobs, daemon=True, args=(mobs,)).start()
+    threading.Thread(target=move_none_players, daemon=True, args=(mobs, items_on_surface,)).start()
     while True:
         clock.tick(30)
 

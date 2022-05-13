@@ -106,3 +106,5 @@ class Player:
             self.health += 10
             self.gold -= 1000
             self.health -= self.health // 100 * self.health % 100
+            return True
+        return False

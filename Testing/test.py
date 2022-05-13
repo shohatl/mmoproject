@@ -51,7 +51,7 @@ def time_to_string(t):
 def show_entities_and_their_particles(entity, cx: int, ch: int):
     entity.x -= cx
     entity.y -= ch
-    if type(entity) == type(mob.Mob(x=0, y=0, lvl=0)):
+    if isinstance(entity, mob.Mob):
         M_rect.center = entity.x, entity.y
         if entity.is_alive:
             if entity.is_melee:
@@ -315,7 +315,7 @@ def generate_drop(x, y, average):
     return dropped_item.Dropped_item(x, y, lvl, "cumball", time.time())
 
 
-def move_all_players_and_their_particles(players: list):  # this function gotta have a threadm list gotta be global
+def move_all_players_and_their_particles(players: list):  # this function gotta have a thread list gotta be global
     for Pl in players:
         Pl.move()
         Pl.ability()
